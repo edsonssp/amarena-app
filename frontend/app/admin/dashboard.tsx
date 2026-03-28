@@ -23,6 +23,9 @@ export default function AdminDashboardScreen() {
   const router = useRouter();
   const [stats, setStats] = useState(null);
   const [showAddProduct, setShowAddProduct] = useState(false);
+  const [showProductsList, setShowProductsList] = useState(false);
+  const [products, setProducts] = useState([]);
+  const [editingProduct, setEditingProduct] = useState(null);
   const [token, setToken] = useState('');
   const [newProduct, setNewProduct] = useState({
     name: '',
@@ -60,6 +63,18 @@ export default function AdminDashboardScreen() {
     }
   };
 
+  const fetchProducts = async () => {
+    try {
+      const adminToken = await AsyncStorage.getItem('adminToken');
+      const response = await axios.get(`${API_URL}/api/products?active_only=false`, {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+      setProducts(response.data);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    }
+  };
+
   const handleLogout = async () => {
     await AsyncStorage.removeItem('adminToken');
     await AsyncStorage.removeItem('adminUsername');
@@ -67,7 +82,6 @@ export default function AdminDashboardScreen() {
   };
 
   const pickImage = async () => {
-    // Solicitar permissão
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     
     if (!permissionResult.granted) {
@@ -75,18 +89,31 @@ export default function AdminDashboardScreen() {
       return;
     }
 
-    // Abrir galeria
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0.5,
+      quality: 0.3, // Reduzir qualidade para 30% para evitar imagens muito grandes
       base64: true,
     });
 
     if (!result.canceled && result.assets[0].base64) {
       const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
-      setNewProduct({ ...newProduct, image: base64Image });
+      
+      // Verificar tamanho aproximado (base64 é ~1.37x maior que o original)
+      const sizeInBytes = base64Image.length;
+      const sizeInMB = sizeInBytes / (1024 * 1024);
+      
+      if (sizeInMB > 10) {
+        Alert.alert('Imagem muito grande', 'Por favor, escolha uma imagem menor (máximo 10MB)');
+        return;
+      }
+      
+      if (editingProduct) {
+        setEditingProduct({ ...editingProduct, image: base64Image });
+      } else {
+        setNewProduct({ ...newProduct, image: base64Image });
+      }
     }
   };
 
@@ -120,10 +147,83 @@ export default function AdminDashboardScreen() {
         image: '',
       });
       fetchStats();
+      fetchProducts();
     } catch (error) {
       Alert.alert('Erro', 'Não foi possível adicionar o produto');
       console.error('Error adding product:', error);
     }
+  };
+
+  const handleEditProduct = async () => {
+    if (!editingProduct.name || !editingProduct.price) {
+      Alert.alert('Erro', 'Preencha pelo menos nome e preço');
+      return;
+    }
+
+    try {
+      await axios.put(
+        `${API_URL}/api/products/${editingProduct.id}`,
+        {
+          name: editingProduct.name,
+          category: editingProduct.category,
+          price: parseFloat(editingProduct.price),
+          description: editingProduct.description,
+          image: editingProduct.image,
+          isLaunch: editingProduct.isLaunch,
+          isActive: editingProduct.isActive,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      Alert.alert('Sucesso', 'Produto atualizado com sucesso!');
+      setEditingProduct(null);
+      fetchStats();
+      fetchProducts();
+    } catch (error) {
+      Alert.alert('Erro', 'Não foi possível atualizar o produto');
+      console.error('Error updating product:', error);
+    }
+  };
+
+  const handleDeleteProduct = async (productId) => {
+    Alert.alert(
+      'Confirmar Exclusão',
+      'Tem certeza que deseja excluir este produto?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Excluir',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await axios.delete(`${API_URL}/api/products/${productId}`, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              Alert.alert('Sucesso', 'Produto excluído com sucesso!');
+              fetchStats();
+              fetchProducts();
+            } catch (error) {
+              Alert.alert('Erro', 'Não foi possível excluir o produto');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const openEditProduct = (product) => {
+    setEditingProduct({
+      id: product.id,
+      name: product.name,
+      category: product.category,
+      price: product.price.toString(),
+      description: product.description || '',
+      image: product.image || '',
+      isLaunch: product.isLaunch || false,
+      isActive: product.isActive !== false,
+    });
   };
 
   return (
@@ -181,6 +281,17 @@ export default function AdminDashboardScreen() {
             <Text style={styles.actionText}>Adicionar Produto</Text>
           </TouchableOpacity>
 
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => {
+              fetchProducts();
+              setShowProductsList(true);
+            }}
+          >
+            <MaterialCommunityIcons name="view-list" size={24} color="#2196F3" />
+            <Text style={styles.actionText}>Gerenciar Produtos</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity style={styles.actionButton}>
             <MaterialCommunityIcons name="tag-plus" size={24} color="#E53935" />
             <Text style={styles.actionText}>Criar Promoção</Text>
@@ -204,6 +315,163 @@ export default function AdminDashboardScreen() {
           <Text style={styles.backToAppText}>Voltar ao App</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Products List Modal */}
+      <Modal
+        visible={showProductsList}
+        animationType="slide"
+        transparent={true}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Gerenciar Produtos</Text>
+              <TouchableOpacity onPress={() => setShowProductsList(false)}>
+                <MaterialCommunityIcons name="close" size={24} color="#333333" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.productsListScroll}>
+              {products.length === 0 ? (
+                <Text style={styles.emptyText}>Nenhum produto cadastrado</Text>
+              ) : (
+                products.map((product) => (
+                  <View key={product.id} style={styles.productItemCard}>
+                    {product.image && (
+                      <Image
+                        source={{ uri: product.image }}
+                        style={styles.productItemImage}
+                        resizeMode="cover"
+                      />
+                    )}
+                    <View style={styles.productItemInfo}>
+                      <Text style={styles.productItemName}>{product.name}</Text>
+                      <Text style={styles.productItemCategory}>{product.category}</Text>
+                      <Text style={styles.productItemPrice}>R$ {product.price.toFixed(2)}</Text>
+                    </View>
+                    <View style={styles.productItemActions}>
+                      <TouchableOpacity
+                        style={styles.editIconButton}
+                        onPress={() => {
+                          setShowProductsList(false);
+                          openEditProduct(product);
+                        }}
+                      >
+                        <MaterialCommunityIcons name="pencil" size={20} color="#2196F3" />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.deleteIconButton}
+                        onPress={() => handleDeleteProduct(product.id)}
+                      >
+                        <MaterialCommunityIcons name="delete" size={20} color="#FF5252" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Edit Product Modal */}
+      <Modal
+        visible={editingProduct !== null}
+        animationType="slide"
+        transparent={true}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Editar Produto</Text>
+              <TouchableOpacity onPress={() => setEditingProduct(null)}>
+                <MaterialCommunityIcons name="close" size={24} color="#333333" />
+              </TouchableOpacity>
+            </View>
+
+            {editingProduct && (
+              <ScrollView style={styles.modalForm}>
+                <Text style={styles.inputLabel}>Imagem do Produto</Text>
+                <TouchableOpacity style={styles.imagePickerButton} onPress={pickImage}>
+                  {editingProduct.image ? (
+                    <Image source={{ uri: editingProduct.image }} style={styles.productImagePreview} resizeMode="cover" />
+                  ) : (
+                    <View style={styles.imagePlaceholder}>
+                      <MaterialCommunityIcons name="camera-plus" size={48} color="#999999" />
+                      <Text style={styles.imagePlaceholderText}>Toque para adicionar foto</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+                {editingProduct.image && (
+                  <TouchableOpacity
+                    style={styles.removeImageButton}
+                    onPress={() => setEditingProduct({ ...editingProduct, image: '' })}
+                  >
+                    <Text style={styles.removeImageText}>Remover Imagem</Text>
+                  </TouchableOpacity>
+                )}
+
+                <Text style={styles.inputLabel}>Nome do Produto</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={editingProduct.name}
+                  onChangeText={(text) => setEditingProduct({ ...editingProduct, name: text })}
+                  placeholder="Ex: Sorvete de Morango"
+                />
+
+                <Text style={styles.inputLabel}>Categoria</Text>
+                <View style={styles.categoryButtons}>
+                  {['sorvetes', 'acai', 'picoles'].map((cat) => (
+                    <TouchableOpacity
+                      key={cat}
+                      style={[
+                        styles.categoryButton,
+                        editingProduct.category === cat && styles.categoryButtonActive,
+                      ]}
+                      onPress={() => setEditingProduct({ ...editingProduct, category: cat })}
+                    >
+                      <Text
+                        style={[
+                          styles.categoryButtonText,
+                          editingProduct.category === cat && styles.categoryButtonTextActive,
+                        ]}
+                      >
+                        {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <Text style={styles.inputLabel}>Preço (R$)</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={editingProduct.price}
+                  onChangeText={(text) => setEditingProduct({ ...editingProduct, price: text })}
+                  placeholder="0.00"
+                  keyboardType="numeric"
+                />
+
+                <Text style={styles.inputLabel}>Descrição (opcional)</Text>
+                <TextInput
+                  style={[styles.textInput, styles.textArea]}
+                  value={editingProduct.description}
+                  onChangeText={(text) => setEditingProduct({ ...editingProduct, description: text })}
+                  placeholder="Descrição do produto..."
+                  multiline
+                  numberOfLines={3}
+                />
+
+                <TouchableOpacity
+                  style={styles.submitButton}
+                  onPress={handleEditProduct}
+                >
+                  <Text style={styles.submitButtonText}>Salvar Alterações</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
 
       {/* Add Product Modal */}
       <Modal
@@ -515,5 +783,62 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
+  },
+  productsListScroll: {
+    padding: 20,
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: '#999999',
+    fontSize: 16,
+    marginTop: 40,
+  },
+  productItemCard: {
+    flexDirection: 'row',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    alignItems: 'center',
+  },
+  productItemImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    backgroundColor: '#E0E0E0',
+  },
+  productItemInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  productItemName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333333',
+  },
+  productItemCategory: {
+    fontSize: 12,
+    color: '#666666',
+    marginTop: 2,
+  },
+  productItemPrice: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#E53935',
+    marginTop: 4,
+  },
+  productItemActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  editIconButton: {
+    padding: 8,
+    backgroundColor: '#E3F2FD',
+    borderRadius: 8,
+  },
+  deleteIconButton: {
+    padding: 8,
+    backgroundColor: '#FFEBEE',
+    borderRadius: 8,
   },
 });
