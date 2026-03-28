@@ -1,0 +1,437 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  TextInput,
+  Modal,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
+
+const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+
+export default function AdminDashboardScreen() {
+  const router = useRouter();
+  const [stats, setStats] = useState(null);
+  const [showAddProduct, setShowAddProduct] = useState(false);
+  const [token, setToken] = useState('');
+  const [newProduct, setNewProduct] = useState({
+    name: '',
+    category: 'sorvetes',
+    price: '',
+    description: '',
+    subcategory: 'frutas',
+    isLaunch: false,
+  });
+
+  useEffect(() => {
+    checkAuth();
+    fetchStats();
+  }, []);
+
+  const checkAuth = async () => {
+    const adminToken = await AsyncStorage.getItem('adminToken');
+    if (!adminToken) {
+      router.replace('/admin');
+      return;
+    }
+    setToken(adminToken);
+  };
+
+  const fetchStats = async () => {
+    try {
+      const adminToken = await AsyncStorage.getItem('adminToken');
+      const response = await axios.get(`${API_URL}/api/admin/stats`, {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+      setStats(response.data);
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
+  };
+
+  const handleLogout = async () => {
+    await AsyncStorage.removeItem('adminToken');
+    await AsyncStorage.removeItem('adminUsername');
+    router.replace('/admin');
+  };
+
+  const handleAddProduct = async () => {
+    if (!newProduct.name || !newProduct.price) {
+      Alert.alert('Erro', 'Preencha pelo menos nome e preço');
+      return;
+    }
+
+    try {
+      await axios.post(
+        `${API_URL}/api/products`,
+        {
+          ...newProduct,
+          price: parseFloat(newProduct.price),
+          image: '', // Placeholder - you can add image picker later
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      Alert.alert('Sucesso', 'Produto adicionado com sucesso!');
+      setShowAddProduct(false);
+      setNewProduct({
+        name: '',
+        category: 'sorvetes',
+        price: '',
+        description: '',
+        subcategory: 'frutas',
+        isLaunch: false,
+      });
+      fetchStats();
+    } catch (error) {
+      Alert.alert('Erro', 'Não foi possível adicionar o produto');
+      console.error('Error adding product:', error);
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.headerTitle}>Painel Admin</Text>
+          <Text style={styles.headerSubtitle}>Bem-vindo!</Text>
+        </View>
+        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+          <MaterialCommunityIcons name="logout" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView style={styles.content}>
+        {/* Stats Cards */}
+        {stats && (
+          <View style={styles.statsContainer}>
+            <View style={styles.statCard}>
+              <MaterialCommunityIcons name="ice-cream" size={32} color="#E53935" />
+              <Text style={styles.statNumber}>{stats.totalProducts}</Text>
+              <Text style={styles.statLabel}>Produtos</Text>
+            </View>
+
+            <View style={styles.statCard}>
+              <MaterialCommunityIcons name="cart" size={32} color="#4CAF50" />
+              <Text style={styles.statNumber}>{stats.totalOrders}</Text>
+              <Text style={styles.statLabel}>Pedidos</Text>
+            </View>
+
+            <View style={styles.statCard}>
+              <MaterialCommunityIcons name="clock-alert" size={32} color="#FF9800" />
+              <Text style={styles.statNumber}>{stats.pendingOrders}</Text>
+              <Text style={styles.statLabel}>Pendentes</Text>
+            </View>
+
+            <View style={styles.statCard}>
+              <MaterialCommunityIcons name="cash" size={32} color="#2196F3" />
+              <Text style={styles.statNumber}>R$ {stats.totalRevenue.toFixed(2)}</Text>
+              <Text style={styles.statLabel}>Faturamento</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Quick Actions */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Ações Rápidas</Text>
+          
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => setShowAddProduct(true)}
+          >
+            <MaterialCommunityIcons name="plus-circle" size={24} color="#4CAF50" />
+            <Text style={styles.actionText}>Adicionar Produto</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.actionButton}>
+            <MaterialCommunityIcons name="tag-plus" size={24} color="#E53935" />
+            <Text style={styles.actionText}>Criar Promoção</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.actionButton}>
+            <MaterialCommunityIcons name="calendar-star" size={24} color="#FF9800" />
+            <Text style={styles.actionText}>Adicionar Temporada</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.actionButton}>
+            <MaterialCommunityIcons name="view-list" size={24} color="#2196F3" />
+            <Text style={styles.actionText}>Ver Todos os Pedidos</Text>
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity
+          style={styles.backToAppButton}
+          onPress={() => router.push('/')}
+        >
+          <Text style={styles.backToAppText}>Voltar ao App</Text>
+        </TouchableOpacity>
+      </ScrollView>
+
+      {/* Add Product Modal */}
+      <Modal
+        visible={showAddProduct}
+        animationType="slide"
+        transparent={true}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Adicionar Produto</Text>
+              <TouchableOpacity onPress={() => setShowAddProduct(false)}>
+                <MaterialCommunityIcons name="close" size={24} color="#333333" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalForm}>
+              <Text style={styles.inputLabel}>Nome do Produto</Text>
+              <TextInput
+                style={styles.textInput}
+                value={newProduct.name}
+                onChangeText={(text) => setNewProduct({ ...newProduct, name: text })}
+                placeholder="Ex: Sorvete de Morango"
+              />
+
+              <Text style={styles.inputLabel}>Categoria</Text>
+              <View style={styles.categoryButtons}>
+                {['sorvetes', 'acai', 'picoles'].map((cat) => (
+                  <TouchableOpacity
+                    key={cat}
+                    style={[
+                      styles.categoryButton,
+                      newProduct.category === cat && styles.categoryButtonActive,
+                    ]}
+                    onPress={() => setNewProduct({ ...newProduct, category: cat })}
+                  >
+                    <Text
+                      style={[
+                        styles.categoryButtonText,
+                        newProduct.category === cat && styles.categoryButtonTextActive,
+                      ]}
+                    >
+                      {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={styles.inputLabel}>Preço (R$)</Text>
+              <TextInput
+                style={styles.textInput}
+                value={newProduct.price}
+                onChangeText={(text) => setNewProduct({ ...newProduct, price: text })}
+                placeholder="0.00"
+                keyboardType="numeric"
+              />
+
+              <Text style={styles.inputLabel}>Descrição (opcional)</Text>
+              <TextInput
+                style={[styles.textInput, styles.textArea]}
+                value={newProduct.description}
+                onChangeText={(text) => setNewProduct({ ...newProduct, description: text })}
+                placeholder="Descrição do produto..."
+                multiline
+                numberOfLines={3}
+              />
+
+              <TouchableOpacity
+                style={styles.submitButton}
+                onPress={handleAddProduct}
+              >
+                <Text style={styles.submitButtonText}>Adicionar Produto</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+  },
+  header: {
+    backgroundColor: '#E53935',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    opacity: 0.9,
+  },
+  logoutButton: {
+    padding: 8,
+  },
+  content: {
+    flex: 1,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    padding: 12,
+    justifyContent: 'space-between',
+  },
+  statCard: {
+    width: '48%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333333',
+    marginTop: 8,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#666666',
+    marginTop: 4,
+  },
+  section: {
+    padding: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333333',
+    marginBottom: 16,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  actionText: {
+    fontSize: 16,
+    color: '#333333',
+    marginLeft: 12,
+    fontWeight: '500',
+  },
+  backToAppButton: {
+    margin: 16,
+    padding: 16,
+    alignItems: 'center',
+  },
+  backToAppText: {
+    color: '#666666',
+    fontSize: 14,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '90%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333333',
+  },
+  modalForm: {
+    padding: 20,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333333',
+    marginBottom: 8,
+    marginTop: 12,
+  },
+  textInput: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: '#333333',
+  },
+  textArea: {
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  categoryButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  categoryButton: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+    padding: 12,
+    borderRadius: 8,
+    marginRight: 8,
+    alignItems: 'center',
+  },
+  categoryButtonActive: {
+    backgroundColor: '#E53935',
+  },
+  categoryButtonText: {
+    fontSize: 14,
+    color: '#666666',
+  },
+  categoryButtonTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  submitButton: {
+    backgroundColor: '#4CAF50',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 24,
+    marginBottom: 20,
+  },
+  submitButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+});

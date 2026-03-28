@@ -101,3 +101,98 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: "Test the Amarena Sorvetes backend API endpoints including health check, admin login, products CRUD, admin stats, and Mercado Pago integration"
+
+backend:
+  - task: "Health Check API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "GET /api/health endpoint working correctly. Returns status: ok and database: connected"
+
+  - task: "Admin Authentication"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "POST /api/admin/login working correctly. Successfully authenticates admin user (admin/admin123) and returns JWT token"
+
+  - task: "Products API - Read Operations"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "GET /api/products and GET /api/products?category=sorvetes working correctly. Returns proper JSON arrays and handles category filtering"
+
+  - task: "Products API - Create Operations"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "POST /api/products working correctly with JWT authentication. Successfully creates products and returns product ID"
+
+  - task: "Admin Dashboard Stats"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "GET /api/admin/stats working correctly with JWT authentication. Returns totalProducts, totalOrders, pendingOrders, totalRevenue"
+
+  - task: "Mercado Pago Payment Integration"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "POST /api/payment/create working correctly. Successfully creates payment preferences and returns preferenceId, initPoint, and publicKey"
+
+frontend:
+  # Frontend testing not performed as per testing agent instructions
+
+metadata:
+  created_by: "testing_agent"
+  version: "1.0"
+  test_sequence: 1
+  run_ui: false
+
+test_plan:
+  current_focus:
+    - "All backend API endpoints tested and working"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+    - agent: "testing"
+      message: "Completed comprehensive backend API testing for Amarena Sorvetes. All 8 test cases passed (100% success rate). Fixed minor issue with Mercado Pago test where parameters needed to be sent as query params instead of JSON body. All core backend functionality is working correctly including authentication, CRUD operations, and payment integration."
