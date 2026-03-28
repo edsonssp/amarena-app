@@ -407,3 +407,18 @@ async def get_stats(user=Depends(verify_token)):
 @app.get("/api/health")
 async def health():
     return {"status": "ok", "database": "connected"}
+
+@app.get("/api/download/backup")
+async def download_backup():
+    from fastapi.responses import FileResponse
+    import os
+    
+    file_path = "/app/amarena-sorvetes-backup.zip"
+    if os.path.exists(file_path):
+        return FileResponse(
+            path=file_path,
+            filename="amarena-sorvetes-backup.zip",
+            media_type="application/zip"
+        )
+    else:
+        raise HTTPException(status_code=404, detail="Arquivo não encontrado")
