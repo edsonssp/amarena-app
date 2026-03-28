@@ -12,10 +12,10 @@ import { useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
 const ACAI_SIZES = [
-  { size: '300ml', price: 25.90, type: 'copo', verdes: 3, laranjas: 0 },
-  { size: '400ml', price: 30.90, type: 'copo', verdes: 3, laranjas: 0 },
-  { size: '500ml', price: 36.90, type: 'copo', verdes: 3, laranjas: 0 },
-  { size: '700ml', price: 44.90, type: 'copo', verdes: 3, laranjas: 0 },
+  { size: '300ml', price: 25.90, type: 'copo', verdes: 3, laranjas: 2 },
+  { size: '400ml', price: 30.90, type: 'copo', verdes: 3, laranjas: 2 },
+  { size: '500ml', price: 36.90, type: 'copo', verdes: 3, laranjas: 2 },
+  { size: '700ml', price: 44.90, type: 'copo', verdes: 3, laranjas: 2 },
   { size: 'M (500ml)', price: 39.90, type: 'tigela', verdes: 3, laranjas: 2 },
   { size: 'G (800ml)', price: 48.90, type: 'tigela', verdes: 3, laranjas: 2 },
 ];
@@ -64,8 +64,9 @@ export default function AcaiScreen() {
   };
 
   const toggleLaranja = (item) => {
-    if (!selectedSize || selectedSize.type !== 'tigela') return;
-    const maxLaranjas = selectedSize.laranjas;
+    if (!selectedSize) return;
+    // Definir limite: tigela tem 2, copo tem 2 também
+    const maxLaranjas = selectedSize.laranjas || 2;
     
     if (selectedLaranjas.includes(item)) {
       setSelectedLaranjas(selectedLaranjas.filter(i => i !== item));
@@ -144,8 +145,7 @@ export default function AcaiScreen() {
                   styles.includesText,
                   selectedSize?.size === item.size && styles.includesTextSelected
                 ]}>
-                  {item.verdes} verdes
-                  {item.laranjas > 0 && ` + ${item.laranjas} laranjas`}
+                  {item.verdes} verdes + {item.laranjas} laranjas
                 </Text>
               </TouchableOpacity>
             ))}
@@ -154,43 +154,41 @@ export default function AcaiScreen() {
 
         {selectedSize && (
           <>
-            {/* Adicionais em Colunas Lado a Lado */}
+            {/* Adicionais em Colunas Lado a Lado - SEMPRE DUAS COLUNAS */}
             <View style={styles.addonsColumnsContainer}>
-              {/* Coluna Laranja - ESQUERDA */}
-              {selectedSize.type === 'tigela' && (
-                <View style={styles.columnOrange}>
-                  <View style={styles.columnHeader}>
-                    <Text style={styles.columnTitle}>
-                      LARANJAS ({selectedLaranjas.length}/{selectedSize.laranjas})
-                    </Text>
-                  </View>
-                  <ScrollView style={styles.columnScroll}>
-                    {ADICIONAIS_LARANJAS.map((item, index) => (
-                      <TouchableOpacity
-                        key={index}
-                        style={[
-                          styles.columnItem,
-                          selectedLaranjas.includes(item) && styles.columnItemOrangeSelected
-                        ]}
-                        onPress={() => toggleLaranja(item)}
-                      >
-                        <Text style={[
-                          styles.columnItemText,
-                          selectedLaranjas.includes(item) && styles.columnItemTextSelected
-                        ]}>
-                          {item}
-                        </Text>
-                        {selectedLaranjas.includes(item) && (
-                          <MaterialCommunityIcons name="check-circle" size={20} color="#FFFFFF" />
-                        )}
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
+              {/* Coluna Laranja - ESQUERDA - SEMPRE VISÍVEL */}
+              <View style={styles.columnOrange}>
+                <View style={styles.columnHeader}>
+                  <Text style={styles.columnTitle}>
+                    LARANJAS ({selectedLaranjas.length}/{selectedSize.laranjas || 2})
+                  </Text>
                 </View>
-              )}
+                <ScrollView style={styles.columnScroll}>
+                  {ADICIONAIS_LARANJAS.map((item, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={[
+                        styles.columnItem,
+                        selectedLaranjas.includes(item) && styles.columnItemOrangeSelected
+                      ]}
+                      onPress={() => toggleLaranja(item)}
+                    >
+                      <Text style={[
+                        styles.columnItemText,
+                        selectedLaranjas.includes(item) && styles.columnItemTextSelected
+                      ]}>
+                        {item}
+                      </Text>
+                      {selectedLaranjas.includes(item) && (
+                        <MaterialCommunityIcons name="check-circle" size={20} color="#FFFFFF" />
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
 
-              {/* Coluna Verde - DIREITA */}
-              <View style={[styles.columnGreen, selectedSize.type !== 'tigela' && styles.columnFull]}>
+              {/* Coluna Verde - DIREITA - SEMPRE VISÍVEL */}
+              <View style={styles.columnGreen}>
                 <View style={styles.columnHeaderGreen}>
                   <Text style={styles.columnTitleGreen}>
                     VERDES ({selectedVerdes.length}/{selectedSize.verdes})
