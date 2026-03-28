@@ -178,7 +178,125 @@ backend:
           comment: "POST /api/payment/create working correctly. Successfully creates payment preferences and returns preferenceId, initPoint, and publicKey"
 
 frontend:
-  # Frontend testing not performed as per testing agent instructions
+  - task: "Home Screen UI and Navigation"
+    implemented: true
+    working: true
+    file: "/app/frontend/app/index.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ Home screen working perfectly. Logo 'Amarena SORVETES' visible, all 6 menu buttons present (Sorvetes, Açaí, Picolés, Promoções, Temporada, WhatsApp) with correct red and green colors. Mobile responsive layout confirmed."
+
+  - task: "Açaí Screen with Two-Column Layout"
+    implemented: true
+    working: true
+    file: "/app/frontend/app/acai.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ CRITICAL NEW LAYOUT VERIFIED: Açaí page shows all 6 size options (300ml, 400ml, 500ml, 700ml, M 500ml, G 800ml). When 'Tigela M' selected, displays TWO COLUMNS side by side - LEFT column ORANGE with 'LARANJAS' header, RIGHT column GREEN with 'VERDES' header. Item selection with checkmarks working. Total price calculation functional."
+
+  - task: "Sorvetes Screen and Product Display"
+    implemented: true
+    working: true
+    file: "/app/frontend/app/sorvetes.tsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ Sorvetes page loads correctly. Shows appropriate empty state when no products exist. Includes 'Ir para Admin' button for product management. Filter categories working (Todos, Sabores de Frutas, Sabores Cremosos)."
+
+  - task: "Picolés Screen"
+    implemented: true
+    working: true
+    file: "/app/frontend/app/picoles.tsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ Picolés page loads correctly. Shows appropriate empty state message 'Nenhum picolé encontrado' with 'Ir para Admin' button for product management."
+
+  - task: "Promoções Screen"
+    implemented: true
+    working: true
+    file: "/app/frontend/app/promocoes.tsx"
+    stuck_count: 0
+    priority: "low"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ Promoções page loads correctly. Shows empty state message 'Nenhuma promoção ativa no momento' with 'Painel Admin' button."
+
+  - task: "Temporada Screen"
+    implemented: true
+    working: true
+    file: "/app/frontend/app/temporada.tsx"
+    stuck_count: 0
+    priority: "low"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ Temporada page loads correctly. Shows empty state message 'Nenhuma temporada ativa no momento' with 'Painel Admin' button."
+
+  - task: "WhatsApp Contact Screen"
+    implemented: true
+    working: true
+    file: "/app/frontend/app/whatsapp.tsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ WhatsApp page working perfectly. Contact information displayed ('Precisa de ajuda?'), 'Enviar Mensagem' button present, location information shown (Rua Dois de Novembro, Centro - Passos, MG), business hours displayed (Seg-Dom: 10h às 22h)."
+
+  - task: "Admin Login Screen"
+    implemented: true
+    working: true
+    file: "/app/frontend/app/admin/index.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ Admin login screen working correctly. 'Painel Admin' title visible, username/password fields functional, login with admin/admin123 credentials successful."
+
+  - task: "Admin Dashboard with Stats"
+    implemented: true
+    working: true
+    file: "/app/frontend/app/admin/dashboard.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ Admin dashboard loads successfully after login. Shows 'Bem-vindo!' message, displays stats cards (2 Produtos, 0 Pedidos, 0 Pendentes, R$ 0.00 Faturamento), 'Adicionar Produto' button functional."
+
+  - task: "Admin Add Product Modal with Image Upload"
+    implemented: true
+    working: true
+    file: "/app/frontend/app/admin/dashboard.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ Add Product modal working perfectly. Image upload functionality visible with 'Toque para adicionar foto' placeholder, form fields present (Name, Category buttons: Sorvetes/Acai/Picoles, Price, Description), all form elements functional."
 
 metadata:
   created_by: "testing_agent"
@@ -188,11 +306,15 @@ metadata:
 
 test_plan:
   current_focus:
-    - "All backend API endpoints tested and working"
+    - "All frontend screens tested and working"
+    - "Critical Açaí two-column layout verified"
+    - "Admin panel with image upload confirmed"
   stuck_tasks: []
-  test_all: false
-  test_priority: "high_first"
+  test_all: true
+  test_priority: "completed"
 
 agent_communication:
     - agent: "testing"
       message: "Completed comprehensive backend API testing for Amarena Sorvetes. All 8 test cases passed (100% success rate). Fixed minor issue with Mercado Pago test where parameters needed to be sent as query params instead of JSON body. All core backend functionality is working correctly including authentication, CRUD operations, and payment integration."
+    - agent: "testing"
+      message: "✅ COMPREHENSIVE FRONTEND TESTING COMPLETED - All screens tested successfully on mobile (360x800). CRITICAL FINDINGS: ✅ Home screen perfect with logo and 6 menu buttons ✅ Açaí NEW TWO-COLUMN LAYOUT working (orange left/green right) ✅ Admin panel with image upload functional ✅ All navigation working ✅ WhatsApp contact screen complete ✅ Empty states properly handled for Sorvetes/Picolés/Promoções/Temporada. Minor: Some deprecated shadow props warnings and invalid 'popsicle' icon name, but core functionality unaffected. App is fully functional and mobile-responsive."

@@ -49,7 +49,7 @@ export default function AdminDashboardScreen() {
   };
 
   const fetchStats = async () => {
-    try:
+    try {
       const adminToken = await AsyncStorage.getItem('adminToken');
       const response = await axios.get(`${API_URL}/api/admin/stats`, {
         headers: { Authorization: `Bearer ${adminToken}` },
