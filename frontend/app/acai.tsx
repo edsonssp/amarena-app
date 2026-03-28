@@ -154,60 +154,72 @@ export default function AcaiScreen() {
 
         {selectedSize && (
           <>
-            {/* Adicionais Verdes */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>
-                Adicionais Verdes ({selectedVerdes.length}/{selectedSize.verdes})
-              </Text>
-              <View style={styles.addonsGrid}>
-                {ADICIONAIS_VERDES.map((item, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={[
-                      styles.addonChip,
-                      selectedVerdes.includes(item) && styles.addonChipSelected
-                    ]}
-                    onPress={() => toggleVerde(item)}
-                  >
-                    <Text style={[
-                      styles.addonText,
-                      selectedVerdes.includes(item) && styles.addonTextSelected
-                    ]}>
-                      {item}
+            {/* Adicionais em Colunas Lado a Lado */}
+            <View style={styles.addonsColumnsContainer}>
+              {/* Coluna Laranja - ESQUERDA */}
+              {selectedSize.type === 'tigela' && (
+                <View style={styles.columnOrange}>
+                  <View style={styles.columnHeader}>
+                    <Text style={styles.columnTitle}>
+                      LARANJAS ({selectedLaranjas.length}/{selectedSize.laranjas})
                     </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
+                  </View>
+                  <ScrollView style={styles.columnScroll}>
+                    {ADICIONAIS_LARANJAS.map((item, index) => (
+                      <TouchableOpacity
+                        key={index}
+                        style={[
+                          styles.columnItem,
+                          selectedLaranjas.includes(item) && styles.columnItemOrangeSelected
+                        ]}
+                        onPress={() => toggleLaranja(item)}
+                      >
+                        <Text style={[
+                          styles.columnItemText,
+                          selectedLaranjas.includes(item) && styles.columnItemTextSelected
+                        ]}>
+                          {item}
+                        </Text>
+                        {selectedLaranjas.includes(item) && (
+                          <MaterialCommunityIcons name="check-circle" size={20} color="#FFFFFF" />
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
 
-            {/* Adicionais Laranjas (apenas para tigela) */}
-            {selectedSize.type === 'tigela' && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>
-                  Adicionais Laranjas ({selectedLaranjas.length}/{selectedSize.laranjas})
-                </Text>
-                <View style={styles.addonsGrid}>
-                  {ADICIONAIS_LARANJAS.map((item, index) => (
+              {/* Coluna Verde - DIREITA */}
+              <View style={[styles.columnGreen, selectedSize.type !== 'tigela' && styles.columnFull]}>
+                <View style={styles.columnHeaderGreen}>
+                  <Text style={styles.columnTitleGreen}>
+                    VERDES ({selectedVerdes.length}/{selectedSize.verdes})
+                  </Text>
+                </View>
+                <ScrollView style={styles.columnScroll}>
+                  {ADICIONAIS_VERDES.map((item, index) => (
                     <TouchableOpacity
                       key={index}
                       style={[
-                        styles.addonChip,
-                        styles.addonChipOrange,
-                        selectedLaranjas.includes(item) && styles.addonChipOrangeSelected
+                        styles.columnItem,
+                        selectedVerdes.includes(item) && styles.columnItemGreenSelected
                       ]}
-                      onPress={() => toggleLaranja(item)}
+                      onPress={() => toggleVerde(item)}
                     >
                       <Text style={[
-                        styles.addonText,
-                        selectedLaranjas.includes(item) && styles.addonTextSelected
+                        styles.columnItemText,
+                        selectedVerdes.includes(item) && styles.columnItemTextSelected
                       ]}>
                         {item}
                       </Text>
+                      {selectedVerdes.includes(item) && (
+                        <MaterialCommunityIcons name="check-circle" size={20} color="#FFFFFF" />
+                      )}
                     </TouchableOpacity>
                   ))}
-                </View>
+                </ScrollView>
               </View>
-            )}
+            </View>
 
             {/* Adicionais Pagos */}
             <View style={styles.section}>
@@ -343,39 +355,75 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     opacity: 0.9,
   },
-  addonsGrid: {
+  addonsColumnsContainer: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    height: 400,
+    marginHorizontal: 8,
+    marginBottom: 16,
     gap: 8,
   },
-  addonChip: {
-    backgroundColor: '#E8F5E9',
-    borderRadius: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    marginRight: 8,
-    marginBottom: 8,
-    borderWidth: 2,
-    borderColor: '#E8F5E9',
-  },
-  addonChipSelected: {
-    backgroundColor: '#4CAF50',
-    borderColor: '#4CAF50',
-  },
-  addonChipOrange: {
-    backgroundColor: '#FFF3E0',
-    borderColor: '#FFF3E0',
-  },
-  addonChipOrangeSelected: {
+  columnOrange: {
+    flex: 1,
     backgroundColor: '#FF9800',
-    borderColor: '#FF9800',
+    borderRadius: 12,
+    overflow: 'hidden',
   },
-  addonText: {
-    fontSize: 14,
-    color: '#333333',
+  columnGreen: {
+    flex: 1,
+    backgroundColor: '#4CAF50',
+    borderRadius: 12,
+    overflow: 'hidden',
   },
-  addonTextSelected: {
+  columnFull: {
+    flex: 1,
+    marginLeft: 0,
+  },
+  columnHeader: {
+    backgroundColor: '#F57C00',
+    padding: 12,
+    alignItems: 'center',
+  },
+  columnHeaderGreen: {
+    backgroundColor: '#388E3C',
+    padding: 12,
+    alignItems: 'center',
+  },
+  columnTitle: {
     color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  columnTitleGreen: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  columnScroll: {
+    flex: 1,
+    padding: 8,
+  },
+  columnItem: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  columnItemGreenSelected: {
+    backgroundColor: '#FFFFFF',
+  },
+  columnItemOrangeSelected: {
+    backgroundColor: '#FFFFFF',
+  },
+  columnItemText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    flex: 1,
+  },
+  columnItemTextSelected: {
+    color: '#333333',
     fontWeight: '600',
   },
   paidAddonsGrid: {

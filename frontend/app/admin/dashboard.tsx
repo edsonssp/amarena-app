@@ -8,11 +8,13 @@ import {
   Alert,
   TextInput,
   Modal,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
@@ -29,6 +31,7 @@ export default function AdminDashboardScreen() {
     description: '',
     subcategory: 'frutas',
     isLaunch: false,
+    image: '',
   });
 
   useEffect(() => {
@@ -46,7 +49,7 @@ export default function AdminDashboardScreen() {
   };
 
   const fetchStats = async () => {
-    try {
+    try:
       const adminToken = await AsyncStorage.getItem('adminToken');
       const response = await axios.get(`${API_URL}/api/admin/stats`, {
         headers: { Authorization: `Bearer ${adminToken}` },
@@ -63,6 +66,30 @@ export default function AdminDashboardScreen() {
     router.replace('/admin');
   };
 
+  const pickImage = async () => {
+    // Solicitar permissão
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (!permissionResult.granted) {
+      Alert.alert('Permissão Negada', 'Precisamos de permissão para acessar suas fotos.');
+      return;
+    }
+
+    // Abrir galeria
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.5,
+      base64: true,
+    });
+
+    if (!result.canceled && result.assets[0].base64) {
+      const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
+      setNewProduct({ ...newProduct, image: base64Image });
+    }
+  };
+
   const handleAddProduct = async () => {
     if (!newProduct.name || !newProduct.price) {
       Alert.alert('Erro', 'Preencha pelo menos nome e preço');
@@ -75,7 +102,6 @@ export default function AdminDashboardScreen() {
         {
           ...newProduct,
           price: parseFloat(newProduct.price),
-          image: '', // Placeholder - you can add image picker later
         },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -91,6 +117,7 @@ export default function AdminDashboardScreen() {
         description: '',
         subcategory: 'frutas',
         isLaunch: false,
+        image: '',
       });
       fetchStats();
     } catch (error) {
@@ -194,6 +221,26 @@ export default function AdminDashboardScreen() {
             </View>
 
             <ScrollView style={styles.modalForm}>
+              <Text style={styles.inputLabel}>Imagem do Produto</Text>
+              <TouchableOpacity style={styles.imagePickerButton} onPress={pickImage}>
+                {newProduct.image ? (
+                  <Image source={{ uri: newProduct.image }} style={styles.productImagePreview} resizeMode="cover" />
+                ) : (
+                  <View style={styles.imagePlaceholder}>
+                    <MaterialCommunityIcons name="camera-plus" size={48} color="#999999" />
+                    <Text style={styles.imagePlaceholderText}>Toque para adicionar foto</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+              {newProduct.image && (
+                <TouchableOpacity
+                  style={styles.removeImageButton}
+                  onPress={() => setNewProduct({ ...newProduct, image: '' })}
+                >
+                  <Text style={styles.removeImageText}>Remover Imagem</Text>
+                </TouchableOpacity>
+              )}
+
               <Text style={styles.inputLabel}>Nome do Produto</Text>
               <TextInput
                 style={styles.textInput}
@@ -433,5 +480,40 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  imagePickerButton: {
+    marginBottom: 16,
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+    borderStyle: 'dashed',
+  },
+  productImagePreview: {
+    width: '100%',
+    height: 200,
+  },
+  imagePlaceholder: {
+    height: 200,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+  },
+  imagePlaceholderText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#999999',
+  },
+  removeImageButton: {
+    backgroundColor: '#FF5252',
+    padding: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  removeImageText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
