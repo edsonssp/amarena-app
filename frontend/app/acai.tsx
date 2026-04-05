@@ -93,18 +93,26 @@ export default function AcaiScreen() {
 
   const addToCart = () => {
     if (!selectedSize) return;
-    const extras = [
-      ...selectedVerdes,
-      ...selectedLaranjas,
-      ...selectedPagos.map(p => p.name),
-    ];
-    const description = `Açaí ${selectedSize.size}` + (extras.length > 0 ? ` + ${extras.join(', ')}` : '');
+    
+    // Montar descrição detalhada dos opcionais
+    let detalhes = '';
+    if (selectedVerdes.length > 0) {
+      detalhes += `🟢 Verdes: ${selectedVerdes.join(', ')}\n`;
+    }
+    if (selectedLaranjas.length > 0) {
+      detalhes += `🟠 Laranjas: ${selectedLaranjas.join(', ')}\n`;
+    }
+    if (selectedPagos.length > 0) {
+      detalhes += `💰 Extras: ${selectedPagos.map(p => `${p.name} (+R$${p.price.toFixed(2)})`).join(', ')}`;
+    }
+
     addItem({
       id: `acai-${selectedSize.size}-${Date.now()}`,
       productId: `acai-${selectedSize.size}`,
-      productName: description,
+      productName: `Açaí ${selectedSize.size} (${selectedSize.type === 'tigela' ? 'Tigela' : 'Copo'})`,
       quantity: 1,
       price: calculateTotal(),
+      description: detalhes,
     });
     alert('Açaí adicionado ao carrinho! ✅');
     router.back();

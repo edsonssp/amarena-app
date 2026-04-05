@@ -33,6 +33,9 @@ export default function CheckoutScreen() {
     message += `\n📋 *Itens do Pedido:*\n`;
     items.forEach((item) => {
       message += `  • ${item.productName} x${item.quantity} — R$ ${(item.price * item.quantity).toFixed(2)}\n`;
+      if (item.description) {
+        message += `    ${item.description}\n`;
+      }
     });
     message += `\n💰 *Total: R$ ${total.toFixed(2)}*\n`;
     if (selectedPayment) {
@@ -119,6 +122,9 @@ export default function CheckoutScreen() {
             <View key={item.id} style={styles.orderItem}>
               <View style={styles.orderItemLeft}>
                 <Text style={styles.orderItemName} numberOfLines={2}>{item.productName}</Text>
+                {item.description ? (
+                  <Text style={styles.orderItemDesc}>{item.description}</Text>
+                ) : null}
                 <Text style={styles.orderItemQty}>Qtd: {item.quantity}</Text>
               </View>
               <Text style={styles.orderItemPrice}>
@@ -364,6 +370,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#888',
     marginTop: 2,
+  },
+  orderItemDesc: {
+    fontSize: 12,
+    color: '#4CAF50',
+    marginTop: 4,
+    lineHeight: 18,
   },
   orderItemPrice: {
     fontSize: 16,
