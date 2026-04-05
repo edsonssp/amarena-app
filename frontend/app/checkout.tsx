@@ -188,9 +188,10 @@ export default function CheckoutScreen() {
     } catch (error: any) {
       setLoading(false);
       console.error('Payment error:', error);
+      const errorMsg = error?.response?.data?.detail || error?.message || 'Erro desconhecido';
       Alert.alert(
         'Erro no Pagamento',
-        'Não foi possível processar o pagamento. Tente novamente ou escolha outra forma de pagamento.'
+        `Não foi possível processar: ${errorMsg}\n\nTente novamente ou escolha outra forma de pagamento.`
       );
     }
   };
