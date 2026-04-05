@@ -6,16 +6,18 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
-  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useCart } from '../contexts/CartContext';
 
-const { width } = Dimensions.get('window');
+const logoAmarena = require('../assets/images/logo-amarena.jpeg');
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { getTotalItems } = useCart();
+  const totalItems = getTotalItems();
 
   const menuButtons = [
     {
@@ -32,7 +34,7 @@ export default function HomeScreen() {
     },
     {
       title: 'Picolés',
-      icon: 'popsicle',
+      icon: 'food-variant',
       route: '/picoles',
       color: '#E53935',
     },
@@ -58,17 +60,36 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header com logo */}
+      {/* Header com logo à esquerda e carrinho à direita */}
       <View style={styles.header}>
-        <View style={styles.logoContainer}>
-          <View style={styles.logoCircle}>
-            <MaterialCommunityIcons name="ice-cream" size={40} color="#E53935" />
+        <View style={styles.headerRow}>
+          {/* Logo circular à esquerda */}
+          <View style={styles.logoContainer}>
+            <View style={styles.logoCircle}>
+              <Image source={logoAmarena} style={styles.logoImage} resizeMode="cover" />
+            </View>
+            <View style={styles.logoTextContainer}>
+              <Text style={styles.logoTitle}>Amarena</Text>
+              <Text style={styles.logoSubtitle}>SORVETES</Text>
+              <Text style={styles.logoLocation}>Passos - MG</Text>
+            </View>
           </View>
-          <View style={styles.logoTextContainer}>
-            <Text style={styles.logoTitle}>Amarena</Text>
-            <Text style={styles.logoSubtitle}>SORVETES</Text>
-            <Text style={styles.logoLocation}>Passos - MG</Text>
-          </View>
+
+          {/* Carrinho à direita */}
+          <TouchableOpacity
+            style={styles.cartButton}
+            onPress={() => router.push('/carrinho')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="cart" size={28} color="#FFFFFF" />
+            {totalItems > 0 && (
+              <View style={styles.cartBadge}>
+                <Text style={styles.cartBadgeText}>
+                  {totalItems > 99 ? '99+' : totalItems}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -130,19 +151,21 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#E53935',
-    paddingVertical: 24,
-    paddingHorizontal: 20,
+    paddingVertical: 18,
+    paddingHorizontal: 16,
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
     elevation: 4,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   logoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
   logoCircle: {
     width: 70,
@@ -151,28 +174,64 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: 14,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  logoImage: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
   },
   logoTextContainer: {
     flex: 1,
   },
   logoTitle: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#FFFFFF',
     letterSpacing: 1,
   },
   logoSubtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#4CAF50',
     fontWeight: '600',
     letterSpacing: 2,
   },
   logoLocation: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#FFFFFF',
     opacity: 0.9,
     marginTop: 2,
+  },
+  cartButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    backgroundColor: '#4CAF50',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: '#E53935',
+  },
+  cartBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: 'bold',
   },
   content: {
     flex: 1,
@@ -187,16 +246,12 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   menuButton: {
-    width: (width - 56) / 2,
+    width: '47%',
     height: 120,
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
     elevation: 3,
   },
   menuIcon: {
