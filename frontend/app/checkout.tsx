@@ -22,6 +22,10 @@ export default function CheckoutScreen() {
   const [selectedPayment, setSelectedPayment] = useState<PaymentMethod>(null);
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  const [customerStreet, setCustomerStreet] = useState('');
+  const [customerNumber, setCustomerNumber] = useState('');
+  const [customerNeighborhood, setCustomerNeighborhood] = useState('');
+  const [customerComplement, setCustomerComplement] = useState('');
   const [observation, setObservation] = useState('');
 
   const total = getTotalPrice();
@@ -30,6 +34,17 @@ export default function CheckoutScreen() {
     let message = `🍦 *PEDIDO AMARENA SORVETES*\n\n`;
     if (customerName) message += `👤 *Cliente:* ${customerName}\n`;
     if (customerPhone) message += `📱 *Telefone:* ${customerPhone}\n`;
+    
+    // Endereço de entrega
+    const addressParts = [customerStreet, customerNumber, customerComplement, customerNeighborhood].filter(p => p.trim());
+    if (addressParts.length > 0) {
+      message += `\n📍 *Endereço de Entrega:*\n`;
+      message += `  ${customerStreet}`;
+      if (customerNumber) message += `, ${customerNumber}`;
+      message += `\n`;
+      if (customerComplement) message += `  ${customerComplement}\n`;
+      if (customerNeighborhood) message += `  ${customerNeighborhood} - Passos/MG\n`;
+    }
     message += `\n📋 *Itens do Pedido:*\n`;
     items.forEach((item) => {
       message += `  • ${item.productName} x${item.quantity} — R$ ${(item.price * item.quantity).toFixed(2)}\n`;
@@ -58,6 +73,18 @@ export default function CheckoutScreen() {
     }
     if (!customerName.trim()) {
       Alert.alert('Atenção', 'Digite seu nome para o pedido!');
+      return;
+    }
+    if (!customerStreet.trim()) {
+      Alert.alert('Atenção', 'Digite a rua para entrega!');
+      return;
+    }
+    if (!customerNumber.trim()) {
+      Alert.alert('Atenção', 'Digite o número da casa/apto!');
+      return;
+    }
+    if (!customerNeighborhood.trim()) {
+      Alert.alert('Atenção', 'Digite o bairro para entrega!');
       return;
     }
 
@@ -150,12 +177,60 @@ export default function CheckoutScreen() {
           />
           <TextInput
             style={styles.input}
-            placeholder="Seu telefone"
+            placeholder="Seu telefone *"
             placeholderTextColor="#999"
             value={customerPhone}
             onChangeText={setCustomerPhone}
             keyboardType="phone-pad"
           />
+        </View>
+
+        {/* Endereço de Entrega */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="location" size={22} color="#E53935" />
+            <Text style={styles.sectionTitle}> Endereço de Entrega</Text>
+          </View>
+          <TextInput
+            style={styles.input}
+            placeholder="Rua / Avenida *"
+            placeholderTextColor="#999"
+            value={customerStreet}
+            onChangeText={setCustomerStreet}
+          />
+          <View style={styles.inputRow}>
+            <TextInput
+              style={[styles.input, styles.inputHalf]}
+              placeholder="Número *"
+              placeholderTextColor="#999"
+              value={customerNumber}
+              onChangeText={setCustomerNumber}
+              keyboardType="numeric"
+            />
+            <TextInput
+              style={[styles.input, styles.inputHalf]}
+              placeholder="Complemento"
+              placeholderTextColor="#999"
+              value={customerComplement}
+              onChangeText={setCustomerComplement}
+            />
+          </View>
+          <TextInput
+            style={styles.input}
+            placeholder="Bairro *"
+            placeholderTextColor="#999"
+            value={customerNeighborhood}
+            onChangeText={setCustomerNeighborhood}
+          />
+          <View style={styles.cityRow}>
+            <Ionicons name="navigate" size={16} color="#4CAF50" />
+            <Text style={styles.cityText}>Passos - MG</Text>
+          </View>
+        </View>
+
+        {/* Observações */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Observações</Text>
           <TextInput
             style={[styles.input, styles.textArea]}
             placeholder="Observações (opcional)"
@@ -415,6 +490,31 @@ const styles = StyleSheet.create({
   textArea: {
     minHeight: 80,
     textAlignVertical: 'top',
+  },
+  inputRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  inputHalf: {
+    flex: 1,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  cityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F5E9',
+    padding: 12,
+    borderRadius: 8,
+  },
+  cityText: {
+    marginLeft: 8,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#4CAF50',
   },
   paymentOption: {
     flexDirection: 'row',
