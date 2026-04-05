@@ -140,6 +140,14 @@ async def startup_event():
             "createdAt": datetime.now()
         })
         print(f"Admin user created: {admin_username}")
+    else:
+        # Atualiza a senha caso tenha mudado
+        hashed = bcrypt.hashpw(admin_password.encode('utf-8'), bcrypt.gensalt())
+        db.admins.update_one(
+            {"username": admin_username},
+            {"$set": {"password": hashed}}
+        )
+        print(f"Admin password updated: {admin_username}")
 
 # Auth endpoints
 @app.post("/api/admin/login")
