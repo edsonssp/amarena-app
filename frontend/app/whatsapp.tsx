@@ -13,7 +13,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function WhatsAppScreen() {
   const router = useRouter();
-  const phoneNumber = '5535999999999'; // Substitua pelo número real
+  const phoneNumber = '5535997509179'; // Amarena Sorvetes - Passos MG
 
   const openWhatsApp = () => {
     const message = 'Olá! Gostaria de fazer um pedido na Amarena Sorvetes! 🍦';
