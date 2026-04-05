@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useCart } from '../contexts/CartContext';
 
 const ACAI_SIZES = [
   { size: '300ml', price: 25.90, type: 'copo', verdes: 3, laranjas: 2 },
@@ -46,6 +47,7 @@ const ADICIONAIS_PAGOS = [
 
 export default function AcaiScreen() {
   const router = useRouter();
+  const { addItem } = useCart();
   const [selectedSize, setSelectedSize] = useState(null);
   const [selectedVerdes, setSelectedVerdes] = useState([]);
   const [selectedLaranjas, setSelectedLaranjas] = useState([]);
@@ -90,8 +92,21 @@ export default function AcaiScreen() {
   };
 
   const addToCart = () => {
-    // Aqui você adicionaria ao carrinho
-    alert('Açaí adicionado ao carrinho!');
+    if (!selectedSize) return;
+    const extras = [
+      ...selectedVerdes,
+      ...selectedLaranjas,
+      ...selectedPagos.map(p => p.name),
+    ];
+    const description = `Açaí ${selectedSize.size}` + (extras.length > 0 ? ` + ${extras.join(', ')}` : '');
+    addItem({
+      id: `acai-${selectedSize.size}-${Date.now()}`,
+      productId: `acai-${selectedSize.size}`,
+      productName: description,
+      quantity: 1,
+      price: calculateTotal(),
+    });
+    alert('Açaí adicionado ao carrinho! ✅');
     router.back();
   };
 

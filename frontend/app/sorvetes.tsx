@@ -12,11 +12,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import axios from 'axios';
+import { useCart } from '../contexts/CartContext';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
 export default function SorvetesScreen() {
   const router = useRouter();
+  const { addItem } = useCart();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -108,8 +110,15 @@ export default function SorvetesScreen() {
                 key={product.id}
                 style={styles.productCard}
                 onPress={() => {
-                  // Adicionar ao carrinho
-                  alert(`${product.name} adicionado ao carrinho!`);
+                  addItem({
+                    id: product.id,
+                    productId: product.id,
+                    productName: product.name,
+                    quantity: 1,
+                    price: product.price,
+                    image: product.image || undefined,
+                  });
+                  alert(`${product.name} adicionado ao carrinho! ✅`);
                 }}
               >
                 {product.image ? (
