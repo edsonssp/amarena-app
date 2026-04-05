@@ -24,7 +24,13 @@ export default function AdminDashboardScreen() {
   const [stats, setStats] = useState(null);
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [showProductsList, setShowProductsList] = useState(false);
+  const [showAddPromotion, setShowAddPromotion] = useState(false);
+  const [showPromotionsList, setShowPromotionsList] = useState(false);
+  const [showAddSeason, setShowAddSeason] = useState(false);
+  const [showSeasonsList, setShowSeasonsList] = useState(false);
   const [products, setProducts] = useState([]);
+  const [promotions, setPromotions] = useState([]);
+  const [seasons, setSeasons] = useState([]);
   const [editingProduct, setEditingProduct] = useState(null);
   const [token, setToken] = useState('');
   const [newProduct, setNewProduct] = useState({
@@ -35,6 +41,23 @@ export default function AdminDashboardScreen() {
     subcategory: 'frutas',
     isLaunch: false,
     image: '',
+  });
+  const [newPromotion, setNewPromotion] = useState({
+    title: '',
+    description: '',
+    discount: '',
+    startDate: '',
+    endDate: '',
+    isActive: true,
+  });
+  const [newSeason, setNewSeason] = useState({
+    name: '',
+    title: '',
+    description: '',
+    startDate: '',
+    endDate: '',
+    bannerImage: '',
+    isActive: true,
   });
 
   useEffect(() => {
@@ -73,6 +96,112 @@ export default function AdminDashboardScreen() {
     } catch (error) {
       console.error('Error fetching products:', error);
     }
+  };
+
+  const fetchPromotions = async () => {
+    try {
+      const adminToken = await AsyncStorage.getItem('adminToken');
+      const response = await axios.get(`${API_URL}/api/promotions?active_only=false`, {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+      setPromotions(response.data);
+    } catch (error) {
+      console.error('Error fetching promotions:', error);
+    }
+  };
+
+  const fetchSeasons = async () => {
+    try {
+      const adminToken = await AsyncStorage.getItem('adminToken');
+      const response = await axios.get(`${API_URL}/api/seasons?active_only=false`, {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+      setSeasons(response.data);
+    } catch (error) {
+      console.error('Error fetching seasons:', error);
+    }
+  };
+
+  const handleAddPromotion = async () => {
+    if (!newPromotion.title || !newPromotion.discount) {
+      Alert.alert('Erro', 'Preencha pelo menos título e desconto');
+      return;
+    }
+    try {
+      await axios.post(
+        `${API_URL}/api/promotions`,
+        { ...newPromotion, discount: parseFloat(newPromotion.discount) },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      Alert.alert('Sucesso', 'Promoção criada com sucesso!');
+      setShowAddPromotion(false);
+      setNewPromotion({ title: '', description: '', discount: '', startDate: '', endDate: '', isActive: true });
+      fetchStats();
+    } catch (error) {
+      Alert.alert('Erro', 'Não foi possível criar a promoção');
+    }
+  };
+
+  const handleDeletePromotion = async (promoId) => {
+    Alert.alert('Confirmar', 'Excluir esta promoção?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Excluir', style: 'destructive',
+        onPress: async () => {
+          try {
+            await axios.delete(`${API_URL}/api/promotions/${promoId}`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            Alert.alert('Sucesso', 'Promoção excluída!');
+            fetchPromotions();
+            fetchStats();
+          } catch (error) {
+            Alert.alert('Erro', 'Não foi possível excluir');
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleAddSeason = async () => {
+    if (!newSeason.name || !newSeason.title) {
+      Alert.alert('Erro', 'Preencha pelo menos nome e título');
+      return;
+    }
+    try {
+      await axios.post(
+        `${API_URL}/api/seasons`,
+        newSeason,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      Alert.alert('Sucesso', 'Temporada criada com sucesso!');
+      setShowAddSeason(false);
+      setNewSeason({ name: '', title: '', description: '', startDate: '', endDate: '', bannerImage: '', isActive: true });
+      fetchStats();
+    } catch (error) {
+      Alert.alert('Erro', 'Não foi possível criar a temporada');
+    }
+  };
+
+  const handleDeleteSeason = async (seasonId) => {
+    Alert.alert('Confirmar', 'Excluir esta temporada?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Excluir', style: 'destructive',
+        onPress: async () => {
+          try {
+            await axios.delete(`${API_URL}/api/seasons/${seasonId}`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            Alert.alert('Sucesso', 'Temporada excluída!');
+            fetchSeasons();
+            fetchStats();
+          } catch (error) {
+            Alert.alert('Erro', 'Não foi possível excluir');
+          }
+        },
+      },
+    ]);
   };
 
   const handleLogout = async () => {
@@ -292,19 +421,42 @@ export default function AdminDashboardScreen() {
             <Text style={styles.actionText}>Gerenciar Produtos</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => setShowAddPromotion(true)}
+          >
             <MaterialCommunityIcons name="tag-plus" size={24} color="#E53935" />
             <Text style={styles.actionText}>Criar Promoção</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionButton}>
-            <MaterialCommunityIcons name="calendar-star" size={24} color="#FF9800" />
-            <Text style={styles.actionText}>Adicionar Temporada</Text>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => {
+              fetchPromotions();
+              setShowPromotionsList(true);
+            }}
+          >
+            <MaterialCommunityIcons name="tag-multiple" size={24} color="#E53935" />
+            <Text style={styles.actionText}>Ver Promoções</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionButton}>
-            <MaterialCommunityIcons name="view-list" size={24} color="#2196F3" />
-            <Text style={styles.actionText}>Ver Todos os Pedidos</Text>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => setShowAddSeason(true)}
+          >
+            <MaterialCommunityIcons name="calendar-star" size={24} color="#FF9800" />
+            <Text style={styles.actionText}>Criar Temporada</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => {
+              fetchSeasons();
+              setShowSeasonsList(true);
+            }}
+          >
+            <MaterialCommunityIcons name="calendar-multiple" size={24} color="#FF9800" />
+            <Text style={styles.actionText}>Ver Temporadas</Text>
           </TouchableOpacity>
         </View>
 
@@ -565,6 +717,216 @@ export default function AdminDashboardScreen() {
               >
                 <Text style={styles.submitButtonText}>Adicionar Produto</Text>
               </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+      {/* Add Promotion Modal */}
+      <Modal visible={showAddPromotion} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Criar Promoção</Text>
+              <TouchableOpacity onPress={() => setShowAddPromotion(false)}>
+                <MaterialCommunityIcons name="close" size={24} color="#333333" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.modalForm}>
+              <Text style={styles.inputLabel}>Título da Promoção *</Text>
+              <TextInput
+                style={styles.textInput}
+                value={newPromotion.title}
+                onChangeText={(text) => setNewPromotion({ ...newPromotion, title: text })}
+                placeholder="Ex: Promoção de Verão"
+              />
+              <Text style={styles.inputLabel}>Descrição</Text>
+              <TextInput
+                style={[styles.textInput, styles.textArea]}
+                value={newPromotion.description}
+                onChangeText={(text) => setNewPromotion({ ...newPromotion, description: text })}
+                placeholder="Descrição da promoção..."
+                multiline
+                numberOfLines={3}
+              />
+              <Text style={styles.inputLabel}>Desconto (%) *</Text>
+              <TextInput
+                style={styles.textInput}
+                value={newPromotion.discount}
+                onChangeText={(text) => setNewPromotion({ ...newPromotion, discount: text })}
+                placeholder="Ex: 20"
+                keyboardType="numeric"
+              />
+              <Text style={styles.inputLabel}>Data Início (DD/MM/AAAA)</Text>
+              <TextInput
+                style={styles.textInput}
+                value={newPromotion.startDate}
+                onChangeText={(text) => setNewPromotion({ ...newPromotion, startDate: text })}
+                placeholder="01/06/2025"
+              />
+              <Text style={styles.inputLabel}>Data Fim (DD/MM/AAAA)</Text>
+              <TextInput
+                style={styles.textInput}
+                value={newPromotion.endDate}
+                onChangeText={(text) => setNewPromotion({ ...newPromotion, endDate: text })}
+                placeholder="30/06/2025"
+              />
+              <TouchableOpacity style={styles.submitButton} onPress={handleAddPromotion}>
+                <Text style={styles.submitButtonText}>Criar Promoção</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Promotions List Modal */}
+      <Modal visible={showPromotionsList} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Promoções</Text>
+              <TouchableOpacity onPress={() => setShowPromotionsList(false)}>
+                <MaterialCommunityIcons name="close" size={24} color="#333333" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.productsListScroll}>
+              {promotions.length === 0 ? (
+                <Text style={styles.emptyText}>Nenhuma promoção cadastrada</Text>
+              ) : (
+                promotions.map((promo) => (
+                  <View key={promo.id} style={styles.productItemCard}>
+                    <View style={[styles.promoBadge, { backgroundColor: promo.isActive ? '#4CAF50' : '#999' }]}>
+                      <Text style={styles.promoBadgeText}>{promo.discount}%</Text>
+                    </View>
+                    <View style={styles.productItemInfo}>
+                      <Text style={styles.productItemName}>{promo.title}</Text>
+                      <Text style={styles.productItemCategory}>{promo.description}</Text>
+                      <Text style={styles.productItemCategory}>
+                        {promo.startDate} — {promo.endDate}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.deleteIconButton}
+                      onPress={() => handleDeletePromotion(promo.id)}
+                    >
+                      <MaterialCommunityIcons name="delete" size={20} color="#FF5252" />
+                    </TouchableOpacity>
+                  </View>
+                ))
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Add Season Modal */}
+      <Modal visible={showAddSeason} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Criar Temporada</Text>
+              <TouchableOpacity onPress={() => setShowAddSeason(false)}>
+                <MaterialCommunityIcons name="close" size={24} color="#333333" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.modalForm}>
+              <Text style={styles.inputLabel}>Nome da Temporada *</Text>
+              <View style={styles.categoryButtons}>
+                {[
+                  { key: 'pascoa', label: 'Páscoa' },
+                  { key: 'junina', label: 'Festa Junina' },
+                  { key: 'natal', label: 'Natal' },
+                  { key: 'carnaval', label: 'Carnaval' },
+                  { key: 'maes', label: 'Dia das Mães' },
+                  { key: 'verao', label: 'Verão' },
+                ].map((season) => (
+                  <TouchableOpacity
+                    key={season.key}
+                    style={[
+                      styles.seasonChip,
+                      newSeason.name === season.key && styles.seasonChipActive,
+                    ]}
+                    onPress={() => setNewSeason({ ...newSeason, name: season.key })}
+                  >
+                    <Text style={[
+                      styles.seasonChipText,
+                      newSeason.name === season.key && styles.seasonChipTextActive,
+                    ]}>{season.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <Text style={styles.inputLabel}>Título *</Text>
+              <TextInput
+                style={styles.textInput}
+                value={newSeason.title}
+                onChangeText={(text) => setNewSeason({ ...newSeason, title: text })}
+                placeholder="Ex: Especial de Natal 2025"
+              />
+              <Text style={styles.inputLabel}>Descrição</Text>
+              <TextInput
+                style={[styles.textInput, styles.textArea]}
+                value={newSeason.description}
+                onChangeText={(text) => setNewSeason({ ...newSeason, description: text })}
+                placeholder="Descrição da temporada..."
+                multiline
+                numberOfLines={3}
+              />
+              <Text style={styles.inputLabel}>Data Início (DD/MM/AAAA)</Text>
+              <TextInput
+                style={styles.textInput}
+                value={newSeason.startDate}
+                onChangeText={(text) => setNewSeason({ ...newSeason, startDate: text })}
+                placeholder="01/12/2025"
+              />
+              <Text style={styles.inputLabel}>Data Fim (DD/MM/AAAA)</Text>
+              <TextInput
+                style={styles.textInput}
+                value={newSeason.endDate}
+                onChangeText={(text) => setNewSeason({ ...newSeason, endDate: text })}
+                placeholder="31/12/2025"
+              />
+              <TouchableOpacity style={styles.submitButton} onPress={handleAddSeason}>
+                <Text style={styles.submitButtonText}>Criar Temporada</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Seasons List Modal */}
+      <Modal visible={showSeasonsList} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Temporadas</Text>
+              <TouchableOpacity onPress={() => setShowSeasonsList(false)}>
+                <MaterialCommunityIcons name="close" size={24} color="#333333" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.productsListScroll}>
+              {seasons.length === 0 ? (
+                <Text style={styles.emptyText}>Nenhuma temporada cadastrada</Text>
+              ) : (
+                seasons.map((season) => (
+                  <View key={season.id} style={styles.productItemCard}>
+                    <View style={[styles.promoBadge, { backgroundColor: season.isActive ? '#FF9800' : '#999' }]}>
+                      <MaterialCommunityIcons name="calendar-star" size={20} color="#FFFFFF" />
+                    </View>
+                    <View style={styles.productItemInfo}>
+                      <Text style={styles.productItemName}>{season.title}</Text>
+                      <Text style={styles.productItemCategory}>{season.name}</Text>
+                      <Text style={styles.productItemCategory}>
+                        {season.startDate} — {season.endDate}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.deleteIconButton}
+                      onPress={() => handleDeleteSeason(season.id)}
+                    >
+                      <MaterialCommunityIcons name="delete" size={20} color="#FF5252" />
+                    </TouchableOpacity>
+                  </View>
+                ))
+              )}
             </ScrollView>
           </View>
         </View>
@@ -840,5 +1202,37 @@ const styles = StyleSheet.create({
     padding: 8,
     backgroundColor: '#FFEBEE',
     borderRadius: 8,
+  },
+  promoBadge: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 4,
+  },
+  promoBadgeText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  seasonChip: {
+    backgroundColor: '#F5F5F5',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  seasonChipActive: {
+    backgroundColor: '#FF9800',
+  },
+  seasonChipText: {
+    fontSize: 13,
+    color: '#666666',
+  },
+  seasonChipTextActive: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
   },
 });
