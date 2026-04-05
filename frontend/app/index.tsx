@@ -34,7 +34,7 @@ export default function HomeScreen() {
     },
     {
       title: 'Picolés',
-      icon: 'food-variant',
+      icon: 'ice-pop',
       route: '/picoles',
       color: '#E53935',
     },
