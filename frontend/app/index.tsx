@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -136,6 +137,16 @@ export default function HomeScreen() {
             <MaterialCommunityIcons name="whatsapp" size={20} color="#4CAF50" />
             <Text style={styles.infoText}>
               Fale conosco no WhatsApp
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.infoCard}
+            onPress={() => Linking.openURL('https://www.instagram.com/amarena.passos')}
+          >
+            <Ionicons name="logo-instagram" size={20} color="#E1306C" />
+            <Text style={styles.infoText}>
+              @amarena.passos
             </Text>
           </TouchableOpacity>
         </View>
