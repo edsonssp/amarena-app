@@ -100,8 +100,10 @@ class Order(BaseModel):
     total: float
     customerName: str
     customerPhone: str
-    paymentMethod: str  # pix, card, cash
-    status: str = "pending"  # pending, paid, preparing, delivered, cancelled
+    customerAddress: str = ""
+    observation: str = ""
+    paymentMethod: str  # pix, cartao, entrega
+    status: str = "pending"
     paymentId: Optional[str] = None
 
 class AdminLogin(BaseModel):
@@ -338,6 +340,104 @@ async def update_order_status(order_id: str, status: str, user=Depends(verify_to
     return {"message": "Order status updated successfully"}
 
 # Payment endpoints
+@app.post("/api/orders")
+async def create_order(order: Order):
+    try:
+        order_dict = order.dict()
+        order_dict["createdAt"] = datetime.now()
+        result = db.orders.insert_one(order_dict)
+        order_id = str(result.inserted_id)
+        return {"orderId": order_id, "status": "pending"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/payment/pix")
+async def create_pix_payment(order_id: str, total: float):
+    try:
+        payment_data = {
+            "transaction_amount": float(total),
+            "description": f"Pedido Amarena #{order_id[:8]}",
+            "payment_method_id": "pix",
+            "payer": {
+                "email": "cliente@amarena.com",
+                "first_name": "Cliente",
+                "last_name": "Amarena"
+            },
+            "external_reference": order_id
+        }
+        
+        payment_response = sdk.payment().create(payment_data)
+        payment = payment_response["response"]
+        
+        if payment_response["status"] == 201:
+            pix_info = payment.get("point_of_interaction", {}).get("transaction_data", {})
+            
+            db.orders.update_one(
+                {"_id": ObjectId(order_id)},
+                {"$set": {"paymentId": str(payment["id"])}}
+            )
+            
+            return {
+                "paymentId": payment["id"],
+                "qrCode": pix_info.get("qr_code", ""),
+                "qrCodeBase64": pix_info.get("qr_code_base64", ""),
+                "ticketUrl": pix_info.get("ticket_url", ""),
+                "status": payment["status"]
+            }
+        else:
+            raise HTTPException(status_code=400, detail=payment.get("message", "Erro ao criar PIX"))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/payment/card")
+async def create_card_payment(order_id: str, total: float):
+    try:
+        preference_data = {
+            "items": [
+                {
+                    "title": f"Pedido Amarena #{order_id[:8]}",
+                    "quantity": 1,
+                    "unit_price": float(total)
+                }
+            ],
+            "back_urls": {
+                "success": "https://amarena-sorveteria.preview.emergentagent.com/success",
+                "failure": "https://amarena-sorveteria.preview.emergentagent.com/failure",
+                "pending": "https://amarena-sorveteria.preview.emergentagent.com/pending"
+            },
+            "auto_return": "approved",
+            "external_reference": order_id
+        }
+        
+        preference_response = sdk.preference().create(preference_data)
+        preference = preference_response["response"]
+        
+        return {
+            "preferenceId": preference["id"],
+            "initPoint": preference["init_point"],
+            "publicKey": MP_PUBLIC_KEY
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/payment/status/{payment_id}")
+async def get_payment_status(payment_id: str):
+    try:
+        payment_info = sdk.payment().get(payment_id)
+        if payment_info["status"] == 200:
+            payment = payment_info["response"]
+            return {
+                "status": payment["status"],
+                "statusDetail": payment.get("status_detail", ""),
+            }
+        raise HTTPException(status_code=404, detail="Pagamento não encontrado")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/api/payment/create")
 async def create_payment(order_id: str, total: float):
     try:

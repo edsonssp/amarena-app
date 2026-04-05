@@ -8,11 +8,15 @@ import {
   Alert,
   Linking,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCart } from '../contexts/CartContext';
+import axios from 'axios';
+
+const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
 type PaymentMethod = 'pix' | 'cartao' | 'entrega' | null;
 
@@ -27,6 +31,7 @@ export default function CheckoutScreen() {
   const [customerNeighborhood, setCustomerNeighborhood] = useState('');
   const [customerComplement, setCustomerComplement] = useState('');
   const [observation, setObservation] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const total = getTotalPrice();
 
@@ -66,7 +71,37 @@ export default function CheckoutScreen() {
     return message;
   };
 
-  const handleFinalize = () => {
+  const createOrder = async () => {
+    const addressParts = [customerStreet, customerNumber, customerComplement, customerNeighborhood].filter(p => p.trim());
+    const address = addressParts.join(', ') + ' - Passos/MG';
+
+    const orderData = {
+      items: items.map(item => ({
+        productId: item.productId,
+        productName: item.productName + (item.description ? ` (${item.description})` : ''),
+        quantity: item.quantity,
+        price: item.price,
+      })),
+      total,
+      customerName: customerName.trim(),
+      customerPhone: customerPhone.trim(),
+      customerAddress: address,
+      observation: observation.trim(),
+      paymentMethod: selectedPayment,
+    };
+
+    const response = await axios.post(`${API_URL}/api/orders`, orderData);
+    return response.data.orderId;
+  };
+
+  const sendWhatsAppNotification = (orderId: string) => {
+    const message = buildOrderMessage();
+    const phoneNumber = '5535997509179';
+    const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+    Linking.openURL(url).catch(() => {});
+  };
+
+  const handleFinalize = async () => {
     if (!selectedPayment) {
       Alert.alert('Atenção', 'Selecione uma forma de pagamento!');
       return;
@@ -88,25 +123,76 @@ export default function CheckoutScreen() {
       return;
     }
 
-    const message = buildOrderMessage();
-    const phoneNumber = '5535997509179';
-    const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+    setLoading(true);
 
-    Linking.openURL(url)
-      .then(() => {
+    try {
+      // 1. Salvar pedido no banco
+      const orderId = await createOrder();
+
+      if (selectedPayment === 'pix') {
+        // 2a. Gerar PIX via Mercado Pago
+        const pixResponse = await axios.post(
+          `${API_URL}/api/payment/pix?order_id=${orderId}&total=${total}`
+        );
+        const pixData = pixResponse.data;
+        setLoading(false);
+
+        // Navegar para tela de PIX com os dados
+        router.push({
+          pathname: '/pagamento-pix',
+          params: {
+            qrCode: pixData.qrCode || '',
+            qrCodeBase64: pixData.qrCodeBase64 || '',
+            ticketUrl: pixData.ticketUrl || '',
+            paymentId: String(pixData.paymentId),
+            total: String(total),
+            orderId: orderId,
+          },
+        });
+        // Enviar notificação no WhatsApp
+        sendWhatsAppNotification(orderId);
+
+      } else if (selectedPayment === 'cartao') {
+        // 2b. Gerar link de pagamento via Mercado Pago
+        const cardResponse = await axios.post(
+          `${API_URL}/api/payment/card?order_id=${orderId}&total=${total}`
+        );
+        const cardData = cardResponse.data;
+        setLoading(false);
+
+        // Abrir Mercado Pago no navegador
+        await Linking.openURL(cardData.initPoint);
+        // Enviar notificação no WhatsApp
+        sendWhatsAppNotification(orderId);
+        clearCart();
+        Alert.alert(
+          'Pagamento via Cartão',
+          'Você será redirecionado para o Mercado Pago. Após o pagamento, seu pedido será confirmado!',
+          [{ text: 'OK', onPress: () => router.push('/') }]
+        );
+
+      } else {
+        // 2c. Pagar na entrega - enviar via WhatsApp
+        setLoading(false);
+        const message = buildOrderMessage();
+        const phoneNumber = '5535997509179';
+        const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+        await Linking.openURL(url);
         clearCart();
         Alert.alert(
           'Pedido Enviado! 🎉',
           'Seu pedido foi enviado para o WhatsApp da Amarena. Aguarde a confirmação!',
           [{ text: 'OK', onPress: () => router.push('/') }]
         );
-      })
-      .catch(() => {
-        Alert.alert(
-          'Erro',
-          'Não foi possível abrir o WhatsApp. Verifique se está instalado.'
-        );
-      });
+      }
+    } catch (error: any) {
+      setLoading(false);
+      console.error('Payment error:', error);
+      Alert.alert(
+        'Erro no Pagamento',
+        'Não foi possível processar o pagamento. Tente novamente ou escolha outra forma de pagamento.'
+      );
+    }
   };
 
   if (items.length === 0) {
@@ -344,13 +430,31 @@ export default function CheckoutScreen() {
         <TouchableOpacity
           style={[
             styles.finalizeButton,
-            !selectedPayment && styles.finalizeButtonDisabled,
+            (!selectedPayment || loading) && styles.finalizeButtonDisabled,
           ]}
           onPress={handleFinalize}
           activeOpacity={0.8}
+          disabled={loading}
         >
-          <MaterialCommunityIcons name="whatsapp" size={22} color="#FFFFFF" />
-          <Text style={styles.finalizeButtonText}>Enviar Pedido via WhatsApp</Text>
+          {loading ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <>
+              {selectedPayment === 'pix' ? (
+                <MaterialCommunityIcons name="qrcode" size={22} color="#FFFFFF" />
+              ) : selectedPayment === 'cartao' ? (
+                <Ionicons name="card" size={22} color="#FFFFFF" />
+              ) : (
+                <MaterialCommunityIcons name="whatsapp" size={22} color="#FFFFFF" />
+              )}
+            </>
+          )}
+          <Text style={styles.finalizeButtonText}>
+            {loading ? 'Processando...' :
+              selectedPayment === 'pix' ? 'Gerar PIX' :
+              selectedPayment === 'cartao' ? 'Pagar com Cartão' :
+              'Enviar Pedido via WhatsApp'}
+          </Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
