@@ -139,6 +139,16 @@ export default function HomeScreen() {
             </Text>
           </TouchableOpacity>
         </View>
+
+        {/* Link secreto admin - toque longo */}
+        <TouchableOpacity
+          onLongPress={() => router.push('/admin')}
+          delayLongPress={2000}
+          activeOpacity={1}
+          style={styles.secretFooter}
+        >
+          <Text style={styles.secretFooterText}>© 2025 Amarena Sorvetes - Passos/MG</Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -279,5 +289,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333333',
     flex: 1,
+  },
+  secretFooter: {
+    alignItems: 'center',
+    paddingVertical: 20,
+    marginTop: 8,
+  },
+  secretFooterText: {
+    fontSize: 11,
+    color: '#CCCCCC',
   },
 });
