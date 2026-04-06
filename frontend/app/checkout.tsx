@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -32,8 +32,25 @@ export default function CheckoutScreen() {
   const [customerComplement, setCustomerComplement] = useState('');
   const [observation, setObservation] = useState('');
   const [loading, setLoading] = useState(false);
+  const [deliveryFee, setDeliveryFee] = useState(0);
+  const [isWeekend, setIsWeekend] = useState(false);
 
   const total = getTotalPrice();
+  const totalWithDelivery = total + deliveryFee;
+
+  useEffect(() => {
+    const fetchDeliveryFee = async () => {
+      try {
+        const response = await axios.get(`${API_URL}/api/delivery-fee`);
+        setDeliveryFee(response.data.currentFee);
+        setIsWeekend(response.data.isWeekend);
+      } catch (error) {
+        console.error('Error fetching delivery fee:', error);
+        setDeliveryFee(5);
+      }
+    };
+    fetchDeliveryFee();
+  }, []);
 
   const buildOrderMessage = () => {
     let message = `🍦 *PEDIDO AMARENA SORVETES*\n\n`;
@@ -57,7 +74,8 @@ export default function CheckoutScreen() {
         message += `    ${item.description}\n`;
       }
     });
-    message += `\n💰 *Total: R$ ${total.toFixed(2)}*\n`;
+    message += `\n💰 *Total: R$ ${totalWithDelivery.toFixed(2)}*\n`;
+    message += `  (Produtos: R$ ${total.toFixed(2)} + Entrega: R$ ${deliveryFee.toFixed(2)})\n`;
     if (selectedPayment) {
       const paymentLabels: Record<string, string> = {
         pix: 'PIX',
@@ -82,7 +100,7 @@ export default function CheckoutScreen() {
         quantity: item.quantity,
         price: item.price,
       })),
-      total,
+      total: totalWithDelivery,
       customerName: customerName.trim(),
       customerPhone: customerPhone.trim(),
       customerAddress: address,
@@ -138,7 +156,7 @@ export default function CheckoutScreen() {
       if (selectedPayment === 'pix') {
         // 2a. Gerar PIX via Mercado Pago
         const pixResponse = await axios.post(
-          `${API_URL}/api/payment/pix?order_id=${orderId}&total=${total}`
+          `${API_URL}/api/payment/pix?order_id=${orderId}&total=${totalWithDelivery}`
         );
         const pixData = pixResponse.data;
         setLoading(false);
@@ -161,7 +179,7 @@ export default function CheckoutScreen() {
       } else if (selectedPayment === 'cartao') {
         // 2b. Gerar link de pagamento via Mercado Pago
         const cardResponse = await axios.post(
-          `${API_URL}/api/payment/card?order_id=${orderId}&total=${total}`
+          `${API_URL}/api/payment/card?order_id=${orderId}&total=${totalWithDelivery}`
         );
         const cardData = cardResponse.data;
         setLoading(false);
@@ -253,8 +271,19 @@ export default function CheckoutScreen() {
             </View>
           ))}
           <View style={styles.totalRow}>
+            <Text style={styles.subtotalLabel}>Subtotal:</Text>
+            <Text style={styles.subtotalValue}>R$ {total.toFixed(2)}</Text>
+          </View>
+          <View style={styles.deliveryRow}>
+            <View style={styles.deliveryInfo}>
+              <MaterialCommunityIcons name="moped" size={18} color="#4CAF50" />
+              <Text style={styles.deliveryLabel}>Entrega {isWeekend ? '(Fim de Semana)' : '(Dia de Semana)'}:</Text>
+            </View>
+            <Text style={styles.deliveryValue}>R$ {deliveryFee.toFixed(2)}</Text>
+          </View>
+          <View style={styles.totalFinalRow}>
             <Text style={styles.totalLabel}>Total:</Text>
-            <Text style={styles.totalValue}>R$ {total.toFixed(2)}</Text>
+            <Text style={styles.totalValue}>R$ {totalWithDelivery.toFixed(2)}</Text>
           </View>
         </View>
 
@@ -432,7 +461,7 @@ export default function CheckoutScreen() {
       <View style={styles.footer}>
         <View style={styles.footerTotal}>
           <Text style={styles.footerTotalLabel}>Total:</Text>
-          <Text style={styles.footerTotalValue}>R$ {total.toFixed(2)}</Text>
+          <Text style={styles.footerTotalValue}>R$ {totalWithDelivery.toFixed(2)}</Text>
         </View>
         <TouchableOpacity
           style={[
@@ -572,8 +601,45 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 16,
-    paddingTop: 12,
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+  },
+  subtotalLabel: {
+    fontSize: 15,
+    color: '#666',
+  },
+  subtotalValue: {
+    fontSize: 15,
+    color: '#666',
+  },
+  deliveryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  deliveryInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  deliveryLabel: {
+    fontSize: 14,
+    color: '#4CAF50',
+    marginLeft: 6,
+  },
+  deliveryValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#4CAF50',
+  },
+  totalFinalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 12,
+    paddingTop: 10,
     borderTopWidth: 2,
     borderTopColor: '#E53935',
   },

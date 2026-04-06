@@ -28,9 +28,11 @@ export default function AdminDashboardScreen() {
   const [showPromotionsList, setShowPromotionsList] = useState(false);
   const [showAddSeason, setShowAddSeason] = useState(false);
   const [showSeasonsList, setShowSeasonsList] = useState(false);
+  const [showDeliveryFee, setShowDeliveryFee] = useState(false);
   const [products, setProducts] = useState([]);
   const [promotions, setPromotions] = useState([]);
   const [seasons, setSeasons] = useState([]);
+  const [deliveryFee, setDeliveryFee] = useState({ weekdayFee: '5.00', weekendFee: '8.00' });
   const [editingProduct, setEditingProduct] = useState(null);
   const [token, setToken] = useState('');
   const [newProduct, setNewProduct] = useState({
@@ -202,6 +204,35 @@ export default function AdminDashboardScreen() {
         },
       },
     ]);
+  };
+
+  const fetchDeliveryFee = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/delivery-fee`);
+      setDeliveryFee({
+        weekdayFee: String(response.data.weekdayFee),
+        weekendFee: String(response.data.weekendFee),
+      });
+    } catch (error) {
+      console.error('Error fetching delivery fee:', error);
+    }
+  };
+
+  const handleSaveDeliveryFee = async () => {
+    try {
+      await axios.put(
+        `${API_URL}/api/admin/delivery-fee`,
+        {
+          weekdayFee: parseFloat(deliveryFee.weekdayFee) || 0,
+          weekendFee: parseFloat(deliveryFee.weekendFee) || 0,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      Alert.alert('Sucesso', 'Taxa de entrega atualizada!');
+      setShowDeliveryFee(false);
+    } catch (error) {
+      Alert.alert('Erro', 'Não foi possível salvar a taxa');
+    }
   };
 
   const handleLogout = async () => {
@@ -457,6 +488,17 @@ export default function AdminDashboardScreen() {
           >
             <MaterialCommunityIcons name="calendar-multiple" size={24} color="#FF9800" />
             <Text style={styles.actionText}>Ver Temporadas</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => {
+              fetchDeliveryFee();
+              setShowDeliveryFee(true);
+            }}
+          >
+            <MaterialCommunityIcons name="moped" size={24} color="#4CAF50" />
+            <Text style={styles.actionText}>Taxa de Entrega</Text>
           </TouchableOpacity>
         </View>
 
@@ -931,6 +973,54 @@ export default function AdminDashboardScreen() {
           </View>
         </View>
       </Modal>
+      {/* Delivery Fee Modal */}
+      <Modal visible={showDeliveryFee} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Taxa de Entrega</Text>
+              <TouchableOpacity onPress={() => setShowDeliveryFee(false)}>
+                <MaterialCommunityIcons name="close" size={24} color="#333333" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.modalForm}>
+              <View style={styles.deliveryCard}>
+                <MaterialCommunityIcons name="calendar-week" size={32} color="#4CAF50" />
+                <Text style={styles.deliveryLabel}>Seg a Sex (Dia de Semana)</Text>
+                <View style={styles.deliveryInputRow}>
+                  <Text style={styles.deliveryCurrency}>R$</Text>
+                  <TextInput
+                    style={styles.deliveryInput}
+                    value={deliveryFee.weekdayFee}
+                    onChangeText={(text) => setDeliveryFee({ ...deliveryFee, weekdayFee: text })}
+                    keyboardType="numeric"
+                    placeholder="5.00"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.deliveryCard}>
+                <MaterialCommunityIcons name="calendar-weekend" size={32} color="#FF9800" />
+                <Text style={styles.deliveryLabel}>Sáb e Dom (Fim de Semana)</Text>
+                <View style={styles.deliveryInputRow}>
+                  <Text style={styles.deliveryCurrency}>R$</Text>
+                  <TextInput
+                    style={styles.deliveryInput}
+                    value={deliveryFee.weekendFee}
+                    onChangeText={(text) => setDeliveryFee({ ...deliveryFee, weekendFee: text })}
+                    keyboardType="numeric"
+                    placeholder="8.00"
+                  />
+                </View>
+              </View>
+
+              <TouchableOpacity style={styles.submitButton} onPress={handleSaveDeliveryFee}>
+                <Text style={styles.submitButtonText}>Salvar Taxa de Entrega</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1234,5 +1324,42 @@ const styles = StyleSheet.create({
   seasonChipTextActive: {
     color: '#FFFFFF',
     fontWeight: 'bold',
+  },
+  deliveryCard: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  deliveryLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginTop: 8,
+    marginBottom: 12,
+  },
+  deliveryInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+  },
+  deliveryCurrency: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#4CAF50',
+    marginRight: 8,
+  },
+  deliveryInput: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#333',
+    paddingVertical: 12,
+    flex: 1,
+    textAlign: 'center',
   },
 });

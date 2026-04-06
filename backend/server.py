@@ -89,6 +89,10 @@ class Season(BaseModel):
     productIds: List[str] = []
     isActive: bool = True
 
+class DeliveryFee(BaseModel):
+    weekdayFee: float  # segunda a sexta
+    weekendFee: float  # sábado e domingo
+
 class OrderItem(BaseModel):
     productId: str
     productName: str
@@ -150,6 +154,49 @@ async def startup_event():
             {"$set": {"password": hashed}}
         )
         print(f"Admin password updated: {admin_username}")
+    
+    # Inicializar taxa de entrega padrão se não existir
+    existing_fee = db.settings.find_one({"key": "delivery_fee"})
+    if not existing_fee:
+        db.settings.insert_one({
+            "key": "delivery_fee",
+            "weekdayFee": 5.00,
+            "weekendFee": 8.00,
+            "updatedAt": datetime.now()
+        })
+        print("Taxa de entrega padrão criada")
+
+# Delivery Fee endpoints
+@app.get("/api/delivery-fee")
+async def get_delivery_fee():
+    fee_config = db.settings.find_one({"key": "delivery_fee"})
+    if not fee_config:
+        return {"weekdayFee": 5.00, "weekendFee": 8.00, "currentFee": 5.00, "isWeekend": False}
+    
+    # Verificar se hoje é fim de semana (sábado=5, domingo=6)
+    today = datetime.now().weekday()
+    is_weekend = today >= 5
+    current_fee = fee_config.get("weekendFee", 8.00) if is_weekend else fee_config.get("weekdayFee", 5.00)
+    
+    return {
+        "weekdayFee": fee_config.get("weekdayFee", 5.00),
+        "weekendFee": fee_config.get("weekendFee", 8.00),
+        "currentFee": current_fee,
+        "isWeekend": is_weekend
+    }
+
+@app.put("/api/admin/delivery-fee")
+async def update_delivery_fee(fee: DeliveryFee, user=Depends(verify_token)):
+    db.settings.update_one(
+        {"key": "delivery_fee"},
+        {"$set": {
+            "weekdayFee": fee.weekdayFee,
+            "weekendFee": fee.weekendFee,
+            "updatedAt": datetime.now()
+        }},
+        upsert=True
+    )
+    return {"message": "Taxa de entrega atualizada com sucesso"}
 
 # Auth endpoints
 @app.post("/api/admin/login")
