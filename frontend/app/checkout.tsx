@@ -90,8 +90,14 @@ export default function CheckoutScreen() {
       paymentMethod: selectedPayment,
     };
 
+    console.log('Creating order...', API_URL);
     const response = await axios.post(`${API_URL}/api/orders`, orderData);
-    return response.data.orderId;
+    console.log('Order response:', JSON.stringify(response.data));
+    const oid = response.data.orderId;
+    if (!oid) {
+      throw new Error('orderId não retornado pelo servidor');
+    }
+    return oid;
   };
 
   const sendWhatsAppNotification = (orderId: string) => {

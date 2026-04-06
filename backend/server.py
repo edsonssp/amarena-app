@@ -324,10 +324,14 @@ async def get_orders(user=Depends(verify_token)):
 
 @app.post("/api/orders")
 async def create_order(order: Order):
-    order_dict = order.dict()
-    order_dict["createdAt"] = datetime.now()
-    result = db.orders.insert_one(order_dict)
-    return {"id": str(result.inserted_id), "message": "Order created successfully"}
+    try:
+        order_dict = order.dict()
+        order_dict["createdAt"] = datetime.now()
+        result = db.orders.insert_one(order_dict)
+        order_id = str(result.inserted_id)
+        return {"orderId": order_id, "status": "pending"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.put("/api/orders/{order_id}/status")
 async def update_order_status(order_id: str, status: str, user=Depends(verify_token)):
@@ -338,18 +342,6 @@ async def update_order_status(order_id: str, status: str, user=Depends(verify_to
     if result.modified_count == 0:
         raise HTTPException(status_code=404, detail="Order not found")
     return {"message": "Order status updated successfully"}
-
-# Payment endpoints
-@app.post("/api/orders")
-async def create_order(order: Order):
-    try:
-        order_dict = order.dict()
-        order_dict["createdAt"] = datetime.now()
-        result = db.orders.insert_one(order_dict)
-        order_id = str(result.inserted_id)
-        return {"orderId": order_id, "status": "pending"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/payment/pix")
 async def create_pix_payment(order_id: str, total: float):
