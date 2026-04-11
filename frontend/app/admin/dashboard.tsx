@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
+import * as Print from 'expo-print';
 import axios from 'axios';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
@@ -29,9 +30,11 @@ export default function AdminDashboardScreen() {
   const [showAddSeason, setShowAddSeason] = useState(false);
   const [showSeasonsList, setShowSeasonsList] = useState(false);
   const [showDeliveryFee, setShowDeliveryFee] = useState(false);
+  const [showOrders, setShowOrders] = useState(false);
   const [products, setProducts] = useState([]);
   const [promotions, setPromotions] = useState([]);
   const [seasons, setSeasons] = useState([]);
+  const [orders, setOrders] = useState([]);
   const [deliveryFee, setDeliveryFee] = useState({ weekdayFee: '5.00', weekendFee: '8.00' });
   const [editingProduct, setEditingProduct] = useState(null);
   const [token, setToken] = useState('');
@@ -232,6 +235,126 @@ export default function AdminDashboardScreen() {
       setShowDeliveryFee(false);
     } catch (error) {
       Alert.alert('Erro', 'Não foi possível salvar a taxa');
+    }
+  };
+
+  const fetchOrders = async () => {
+    try {
+      const adminToken = await AsyncStorage.getItem('adminToken');
+      const response = await axios.get(`${API_URL}/api/orders`, {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+      setOrders(response.data);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+    }
+  };
+
+  const updateOrderStatus = async (orderId: string, newStatus: string) => {
+    try {
+      await axios.put(
+        `${API_URL}/api/orders/${orderId}/status?status=${newStatus}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      fetchOrders();
+    } catch (error) {
+      Alert.alert('Erro', 'Não foi possível atualizar o status');
+    }
+  };
+
+  const printOrderTicket = async (order: any) => {
+    const paymentLabels: Record<string, string> = {
+      pix: 'PIX',
+      cartao: 'Cartao Credito/Debito',
+      entrega: 'Pagar na Entrega',
+    };
+
+    const date = order.createdAt ? new Date(order.createdAt).toLocaleDateString('pt-BR') : '';
+    const time = order.createdAt ? new Date(order.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
+
+    const orderItems = order.items || [];
+    const itemsHTML = orderItems.map((item: any) => `
+      <tr>
+        <td style="text-align:left;padding:2px 0;">${item.quantity || 1}x ${item.productName || ''}</td>
+        <td style="text-align:right;padding:2px 0;white-space:nowrap;">R$ ${((item.price || 0) * (item.quantity || 1)).toFixed(2)}</td>
+      </tr>
+    `).join('');
+
+    const subtotal = orderItems.reduce((sum: number, item: any) => sum + ((item.price || 0) * (item.quantity || 1)), 0);
+    const deliveryValue = (order.total || 0) - subtotal;
+
+    const html = `
+      <html>
+        <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            @page { margin: 0; size: 80mm auto; }
+            body { font-family: 'Courier New', monospace; font-size: 12px; margin: 0; padding: 8px; width: 76mm; color: #000; }
+            .center { text-align: center; }
+            .bold { font-weight: bold; }
+            .line { border-top: 1px dashed #000; margin: 6px 0; }
+            .double-line { border-top: 2px solid #000; margin: 6px 0; }
+            table { width: 100%; border-collapse: collapse; }
+            .total-row td { font-size: 16px; font-weight: bold; padding-top: 4px; }
+            .header { font-size: 16px; font-weight: bold; }
+            .sub-header { font-size: 10px; }
+          </style>
+        </head>
+        <body>
+          <div class="center">
+            <div class="header">AMARENA SORVETES</div>
+            <div class="sub-header">Rua Dois de Novembro - Centro</div>
+            <div class="sub-header">Passos - MG | (35) 9 7509-9179</div>
+          </div>
+          <div class="double-line"></div>
+          <div class="center bold">CUPOM DE PEDIDO</div>
+          <div class="center sub-header">Pedido #${(order.id || '').slice(-6).toUpperCase()}</div>
+          <div class="center sub-header">${date} - ${time}</div>
+          <div class="line"></div>
+          <div class="bold">CLIENTE</div>
+          <div>${order.customerName || ''}</div>
+          ${order.customerPhone ? `<div>Tel: ${order.customerPhone}</div>` : ''}
+          <div class="line"></div>
+          <div class="bold">ENDERECO DE ENTREGA</div>
+          <div>${order.customerAddress || ''}</div>
+          <div class="line"></div>
+          <div class="bold">ITENS DO PEDIDO</div>
+          <table>${itemsHTML}</table>
+          <div class="line"></div>
+          <table>
+            <tr>
+              <td>Subtotal:</td>
+              <td style="text-align:right;">R$ ${subtotal.toFixed(2)}</td>
+            </tr>
+            <tr>
+              <td>Taxa de Entrega:</td>
+              <td style="text-align:right;">R$ ${deliveryValue > 0 ? deliveryValue.toFixed(2) : '0.00'}</td>
+            </tr>
+          </table>
+          <div class="double-line"></div>
+          <table>
+            <tr class="total-row">
+              <td>TOTAL:</td>
+              <td style="text-align:right;">R$ ${(order.total || 0).toFixed(2)}</td>
+            </tr>
+          </table>
+          <div class="line"></div>
+          <div class="bold">PAGAMENTO</div>
+          <div>${paymentLabels[order.paymentMethod] || order.paymentMethod || ''}</div>
+          ${order.observation ? `<div class="line"></div><div class="bold">OBSERVACOES</div><div>${order.observation}</div>` : ''}
+          <div class="double-line"></div>
+          <div class="center sub-header">Obrigado pela preferencia!</div>
+          <div class="center sub-header">@amarena.passos</div>
+          <div class="center sub-header" style="margin-top:8px;">.</div>
+        </body>
+      </html>
+    `;
+
+    try {
+      await Print.printAsync({ html, width: 302 });
+    } catch (error) {
+      Alert.alert('Erro', 'Não foi possível imprimir. Verifique a impressora.');
     }
   };
 
@@ -499,6 +622,17 @@ export default function AdminDashboardScreen() {
           >
             <MaterialCommunityIcons name="moped" size={24} color="#4CAF50" />
             <Text style={styles.actionText}>Taxa de Entrega</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionButton, { borderColor: '#1976D2', borderWidth: 2 }]}
+            onPress={() => {
+              fetchOrders();
+              setShowOrders(true);
+            }}
+          >
+            <MaterialCommunityIcons name="receipt" size={24} color="#1976D2" />
+            <Text style={[styles.actionText, { color: '#1976D2' }]}>Ver Pedidos</Text>
           </TouchableOpacity>
         </View>
 
@@ -973,6 +1107,136 @@ export default function AdminDashboardScreen() {
           </View>
         </View>
       </Modal>
+      {/* Orders Modal */}
+      <Modal visible={showOrders} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxHeight: '95%' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Pedidos</Text>
+              <TouchableOpacity onPress={() => setShowOrders(false)}>
+                <MaterialCommunityIcons name="close" size={24} color="#333333" />
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity
+              style={styles.refreshButton}
+              onPress={fetchOrders}
+            >
+              <MaterialCommunityIcons name="refresh" size={18} color="#1976D2" />
+              <Text style={styles.refreshText}>Atualizar Pedidos</Text>
+            </TouchableOpacity>
+            <ScrollView style={styles.productsListScroll}>
+              {orders.length === 0 ? (
+                <Text style={styles.emptyText}>Nenhum pedido recebido</Text>
+              ) : (
+                orders.map((order: any) => {
+                  const statusColors: Record<string, string> = {
+                    pending: '#FF9800',
+                    paid: '#4CAF50',
+                    preparing: '#1976D2',
+                    delivered: '#4CAF50',
+                    cancelled: '#F44336',
+                  };
+                  const statusLabels: Record<string, string> = {
+                    pending: 'Pendente',
+                    paid: 'Pago',
+                    preparing: 'Preparando',
+                    delivered: 'Entregue',
+                    cancelled: 'Cancelado',
+                  };
+                  const payLabels: Record<string, string> = {
+                    pix: 'PIX',
+                    cartao: 'Cartao',
+                    entrega: 'Na Entrega',
+                  };
+                  const date = order.createdAt ? new Date(order.createdAt).toLocaleDateString('pt-BR') : '';
+                  const time = order.createdAt ? new Date(order.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
+
+                  return (
+                    <View key={order.id} style={styles.orderCard}>
+                      {/* Header do pedido */}
+                      <View style={styles.orderCardHeader}>
+                        <View>
+                          <Text style={styles.orderNumber}>Pedido #{(order.id || '').slice(-6).toUpperCase()}</Text>
+                          <Text style={styles.orderDate}>{date} - {time}</Text>
+                        </View>
+                        <View style={[styles.statusBadge, { backgroundColor: statusColors[order.status] || '#999' }]}>
+                          <Text style={styles.statusText}>{statusLabels[order.status] || order.status}</Text>
+                        </View>
+                      </View>
+
+                      {/* Cliente */}
+                      <View style={styles.orderDetail}>
+                        <MaterialCommunityIcons name="account" size={16} color="#666" />
+                        <Text style={styles.orderDetailText}>{order.customerName || ''}</Text>
+                      </View>
+                      {order.customerPhone ? (
+                        <View style={styles.orderDetail}>
+                          <MaterialCommunityIcons name="phone" size={16} color="#666" />
+                          <Text style={styles.orderDetailText}>{order.customerPhone}</Text>
+                        </View>
+                      ) : null}
+                      <View style={styles.orderDetail}>
+                        <MaterialCommunityIcons name="map-marker" size={16} color="#666" />
+                        <Text style={styles.orderDetailText} numberOfLines={2}>{order.customerAddress || ''}</Text>
+                      </View>
+
+                      {/* Itens */}
+                      <View style={styles.orderItemsList}>
+                        {(order.items || []).map((item: any, idx: number) => (
+                          <Text key={idx} style={styles.orderItemText}>
+                            {item.quantity || 1}x {item.productName} — R$ {((item.price || 0) * (item.quantity || 1)).toFixed(2)}
+                          </Text>
+                        ))}
+                      </View>
+
+                      {/* Total e pagamento */}
+                      <View style={styles.orderFooter}>
+                        <View>
+                          <Text style={styles.orderTotal}>R$ {(order.total || 0).toFixed(2)}</Text>
+                          <Text style={styles.orderPayment}>{payLabels[order.paymentMethod] || order.paymentMethod}</Text>
+                        </View>
+                      </View>
+
+                      {order.observation ? (
+                        <Text style={styles.orderObs}>Obs: {order.observation}</Text>
+                      ) : null}
+
+                      {/* Ações */}
+                      <View style={styles.orderActions}>
+                        <TouchableOpacity
+                          style={styles.printTicketBtn}
+                          onPress={() => printOrderTicket(order)}
+                        >
+                          <MaterialCommunityIcons name="printer" size={18} color="#FFF" />
+                          <Text style={styles.printTicketText}>Imprimir</Text>
+                        </TouchableOpacity>
+
+                        {order.status === 'pending' && (
+                          <TouchableOpacity
+                            style={[styles.statusBtn, { backgroundColor: '#1976D2' }]}
+                            onPress={() => updateOrderStatus(order.id, 'preparing')}
+                          >
+                            <Text style={styles.statusBtnText}>Preparando</Text>
+                          </TouchableOpacity>
+                        )}
+                        {order.status === 'preparing' && (
+                          <TouchableOpacity
+                            style={[styles.statusBtn, { backgroundColor: '#4CAF50' }]}
+                            onPress={() => updateOrderStatus(order.id, 'delivered')}
+                          >
+                            <Text style={styles.statusBtnText}>Entregue</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    </View>
+                  );
+                })
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
       {/* Delivery Fee Modal */}
       <Modal visible={showDeliveryFee} animationType="slide" transparent={true}>
         <View style={styles.modalOverlay}>
@@ -1361,5 +1625,130 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     flex: 1,
     textAlign: 'center',
+  },
+  refreshButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 10,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    backgroundColor: '#E3F2FD',
+    borderRadius: 8,
+  },
+  refreshText: {
+    color: '#1976D2',
+    fontWeight: '600',
+    marginLeft: 6,
+    fontSize: 14,
+  },
+  orderCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#E53935',
+    elevation: 1,
+  },
+  orderCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  orderNumber: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  orderDate: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 2,
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  orderDetail: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 4,
+  },
+  orderDetailText: {
+    fontSize: 13,
+    color: '#555',
+    marginLeft: 8,
+    flex: 1,
+  },
+  orderItemsList: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  orderItemText: {
+    fontSize: 12,
+    color: '#333',
+    marginBottom: 3,
+  },
+  orderFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  orderTotal: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#E53935',
+  },
+  orderPayment: {
+    fontSize: 12,
+    color: '#4CAF50',
+    fontWeight: '600',
+  },
+  orderObs: {
+    fontSize: 12,
+    color: '#FF9800',
+    fontStyle: 'italic',
+    marginBottom: 8,
+  },
+  orderActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+  printTicketBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E53935',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  printTicketText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: 13,
+    marginLeft: 6,
+  },
+  statusBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  statusBtnText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: 13,
   },
 });
