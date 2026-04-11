@@ -173,9 +173,6 @@ export default function CheckoutScreen() {
             orderId: orderId,
           },
         });
-        // Enviar notificação no WhatsApp
-        sendWhatsAppNotification(orderId);
-
       } else if (selectedPayment === 'cartao') {
         // 2b. Gerar link de pagamento via Mercado Pago
         const cardResponse = await axios.post(
@@ -186,8 +183,6 @@ export default function CheckoutScreen() {
 
         // Abrir Mercado Pago no navegador
         await Linking.openURL(cardData.initPoint);
-        // Enviar notificação no WhatsApp
-        sendWhatsAppNotification(orderId);
         clearCart();
         Alert.alert(
           'Pagamento via Cartão',
