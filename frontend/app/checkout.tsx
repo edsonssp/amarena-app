@@ -125,6 +125,34 @@ export default function CheckoutScreen() {
     Linking.openURL(url).catch(() => {});
   };
 
+  const navigateToTicket = (orderId: string) => {
+    const ticketItems = items.map(item => ({
+      productName: item.productName,
+      quantity: item.quantity,
+      price: item.price,
+      description: item.description || '',
+    }));
+
+    const addressParts = [customerStreet, customerNumber, customerComplement, customerNeighborhood].filter(p => p.trim());
+    const address = addressParts.join(', ') + ' - Passos/MG';
+
+    router.push({
+      pathname: '/ticket',
+      params: {
+        orderId,
+        customerName: customerName.trim(),
+        customerPhone: customerPhone.trim(),
+        customerAddress: address,
+        items: JSON.stringify(ticketItems),
+        subtotal: String(total),
+        deliveryFee: String(deliveryFee),
+        totalFinal: String(totalWithDelivery),
+        paymentMethod: String(selectedPayment),
+        observation: observation.trim(),
+      },
+    });
+  };
+
   const handleFinalize = async () => {
     if (!selectedPayment) {
       Alert.alert('Atenção', 'Selecione uma forma de pagamento!');
@@ -184,11 +212,7 @@ export default function CheckoutScreen() {
         // Abrir Mercado Pago no navegador
         await Linking.openURL(cardData.initPoint);
         clearCart();
-        Alert.alert(
-          'Pagamento via Cartão',
-          'Você será redirecionado para o Mercado Pago. Após o pagamento, seu pedido será confirmado!',
-          [{ text: 'OK', onPress: () => router.push('/') }]
-        );
+        navigateToTicket(orderId);
 
       } else {
         // 2c. Pagar na entrega - enviar via WhatsApp
@@ -198,11 +222,7 @@ export default function CheckoutScreen() {
         const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
         await Linking.openURL(url);
         clearCart();
-        Alert.alert(
-          'Pedido Enviado! 🎉',
-          'Seu pedido foi enviado para o WhatsApp da Amarena. Aguarde a confirmação!',
-          [{ text: 'OK', onPress: () => router.push('/') }]
-        );
+        navigateToTicket(orderId);
       }
     } catch (error: any) {
       setLoading(false);
