@@ -184,13 +184,14 @@ export default function CheckoutScreen() {
       if (selectedPayment === 'pix') {
         // 2a. PIX com chave CNPJ da Amarena
         setLoading(false);
-        // Enviar cupom para WhatsApp da loja
-        sendWhatsAppNotification(orderId);
+        // WhatsApp será enviado após o cliente confirmar o pagamento na tela do PIX
+        const message = buildOrderMessage();
         router.push({
           pathname: '/pagamento-pix',
           params: {
             total: String(totalWithDelivery),
             orderId: orderId,
+            whatsappMessage: message,
           },
         });
       } else if (selectedPayment === 'cartao') {

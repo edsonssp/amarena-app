@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -24,7 +25,7 @@ export default function PagamentoPixScreen() {
   const [copiedKey, setCopiedKey] = useState(false);
   const [copiedValue, setCopiedValue] = useState(false);
 
-  const { total, orderId } = params;
+  const { total, orderId, whatsappMessage } = params;
   const totalValue = Number(total).toFixed(2);
 
   const copyPixKey = async () => {
@@ -43,6 +44,12 @@ export default function PagamentoPixScreen() {
 
   const handleConfirm = () => {
     clearCart();
+    // Enviar cupom para WhatsApp da loja APÓS o pagamento
+    if (whatsappMessage) {
+      const phoneNumber = '5535997509179';
+      const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(String(whatsappMessage))}`;
+      Linking.openURL(url).catch(() => {});
+    }
     Alert.alert(
       'Pedido Confirmado! 🎉',
       'Após o pagamento, seu pedido será preparado e enviado!',

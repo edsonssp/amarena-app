@@ -189,9 +189,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   logoCircle: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
@@ -201,9 +201,9 @@ const styles = StyleSheet.create({
     borderColor: '#FFFFFF',
   },
   logoImage: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 74,
+    height: 74,
+    borderRadius: 37,
   },
   logoTextContainer: {
     flex: 1,
