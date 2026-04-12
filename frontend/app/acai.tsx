@@ -13,10 +13,10 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCart } from '../contexts/CartContext';
 
 const ACAI_SIZES = [
-  { size: '300ml', price: 25.90, type: 'copo', verdes: 3, laranjas: 2 },
-  { size: '400ml', price: 30.90, type: 'copo', verdes: 3, laranjas: 2 },
-  { size: '500ml', price: 36.90, type: 'copo', verdes: 3, laranjas: 2 },
-  { size: '700ml', price: 44.90, type: 'copo', verdes: 3, laranjas: 2 },
+  { size: '300ml', price: 25.90, type: 'copo', verdes: 3, laranjas: 1 },
+  { size: '400ml', price: 30.90, type: 'copo', verdes: 3, laranjas: 1 },
+  { size: '500ml', price: 36.90, type: 'copo', verdes: 3, laranjas: 1 },
+  { size: '700ml', price: 44.90, type: 'copo', verdes: 3, laranjas: 1 },
   { size: 'M (500ml)', price: 39.90, type: 'tigela', verdes: 3, laranjas: 2 },
   { size: 'G (800ml)', price: 48.90, type: 'tigela', verdes: 3, laranjas: 2 },
 ];
