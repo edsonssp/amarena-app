@@ -22,9 +22,9 @@ const ACAI_SIZES = [
 ];
 
 const ADICIONAIS_VERDES = [
-  'Abacaxi', 'Banana', 'Beijinho cremoso', 'Cobertura de Chocolate',
+  'Banana', 'Beijinho cremoso', 'Cobertura de Chocolate',
   'Cobertura de Morango', 'Granola', 'Leite condensado', 'Leite em Pó',
-  'Mel', 'Paçoca', 'Polpa de morango', 'Salada de frutas',
+  'Mel', 'Paçoca', 'Polpa de morango',
   'Sorvete de Creme', 'Sorvete de Morango', 'Sorvete de Chocolate',
   'Sorvete de Cupuaçu', 'Sucrilhos', 'Uva', 'Chantilly'
 ];
