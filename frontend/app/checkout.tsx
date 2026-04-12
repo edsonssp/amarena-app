@@ -184,6 +184,8 @@ export default function CheckoutScreen() {
       if (selectedPayment === 'pix') {
         // 2a. PIX com chave CNPJ da Amarena
         setLoading(false);
+        // Enviar cupom para WhatsApp da loja
+        sendWhatsAppNotification(orderId);
         router.push({
           pathname: '/pagamento-pix',
           params: {
@@ -199,6 +201,8 @@ export default function CheckoutScreen() {
         const cardData = cardResponse.data;
         setLoading(false);
 
+        // Enviar cupom para WhatsApp da loja
+        sendWhatsAppNotification(orderId);
         // Abrir Mercado Pago no navegador
         await Linking.openURL(cardData.initPoint);
         clearCart();
@@ -327,16 +331,16 @@ export default function CheckoutScreen() {
           />
           <View style={styles.inputRow}>
             <TextInput
-              style={[styles.input, styles.inputHalf]}
-              placeholder="Número *"
+              style={[styles.input, styles.inputSmall]}
+              placeholder="Nº *"
               placeholderTextColor="#999"
               value={customerNumber}
               onChangeText={setCustomerNumber}
               keyboardType="numeric"
             />
             <TextInput
-              style={[styles.input, styles.inputHalf]}
-              placeholder="Complemento"
+              style={[styles.input, styles.inputLarge]}
+              placeholder="Apto / Casa fundos / Bloco"
               placeholderTextColor="#999"
               value={customerComplement}
               onChangeText={setCustomerComplement}
@@ -677,7 +681,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
   },
-  inputHalf: {
+  inputSmall: {
+    width: 80,
+  },
+  inputLarge: {
     flex: 1,
   },
   sectionHeader: {
