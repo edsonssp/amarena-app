@@ -182,22 +182,12 @@ export default function CheckoutScreen() {
       const orderId = await createOrder();
 
       if (selectedPayment === 'pix') {
-        // 2a. Gerar PIX via Mercado Pago
-        const pixResponse = await axios.post(
-          `${API_URL}/api/payment/pix?order_id=${orderId}&total=${totalWithDelivery}`
-        );
-        const pixData = pixResponse.data;
+        // 2a. PIX com chave CNPJ da Amarena
         setLoading(false);
-
-        // Navegar para tela de PIX com os dados
         router.push({
           pathname: '/pagamento-pix',
           params: {
-            qrCode: pixData.qrCode || '',
-            qrCodeBase64: pixData.qrCodeBase64 || '',
-            ticketUrl: pixData.ticketUrl || '',
-            paymentId: String(pixData.paymentId),
-            total: String(total),
+            total: String(totalWithDelivery),
             orderId: orderId,
           },
         });
