@@ -27,21 +27,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const addItem = (newItem: CartItem) => {
     setItems((currentItems) => {
-      // Verifica se o item já existe no carrinho
+      // Para itens com descrição diferente (ex: açaí com opcionais diferentes), adiciona separado
       const existingItem = currentItems.find(
-        (item) => item.productId === newItem.productId
+        (item) => item.productId === newItem.productId && item.description === (newItem.description || '')
       );
 
-      if (existingItem) {
-        // Se existe, aumenta a quantidade
+      if (existingItem && !newItem.description) {
+        // Se existe e não tem descrição especial, aumenta a quantidade
         return currentItems.map((item) =>
-          item.productId === newItem.productId
+          item.productId === newItem.productId && !item.description
             ? { ...item, quantity: item.quantity + newItem.quantity }
             : item
         );
       }
 
-      // Se não existe, adiciona novo item
+      // Adiciona como novo item (cada açaí com opcionais diferentes é separado)
       return [...currentItems, { ...newItem, id: Date.now().toString() }];
     });
   };
