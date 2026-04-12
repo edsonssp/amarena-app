@@ -67,7 +67,7 @@ export default function HomeScreen() {
           {/* Logo circular à esquerda */}
           <View style={styles.logoContainer}>
             <View style={styles.logoCircle}>
-              <Image source={logoAmarena} style={styles.logoImage} resizeMode="cover" />
+              <Image source={logoAmarena} style={styles.logoImage} resizeMode="contain" />
             </View>
             <View style={styles.logoTextContainer}>
               <Text style={styles.logoTitle}>Amarena</Text>
