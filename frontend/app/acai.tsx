@@ -94,6 +94,18 @@ export default function AcaiScreen() {
   const addToCart = () => {
     if (!selectedSize) return;
     
+    const maxVerdes = selectedSize.verdes;
+    const maxLaranjas = selectedSize.laranjas || 2;
+
+    if (selectedVerdes.length < maxVerdes) {
+      alert(`Escolha ${maxVerdes} opções VERDES! Faltam ${maxVerdes - selectedVerdes.length}.`);
+      return;
+    }
+    if (selectedLaranjas.length < maxLaranjas) {
+      alert(`Escolha ${maxLaranjas} opções LARANJAS! Faltam ${maxLaranjas - selectedLaranjas.length}.`);
+      return;
+    }
+    
     // Montar descrição detalhada dos opcionais
     let detalhes = '';
     if (selectedVerdes.length > 0) {
@@ -282,8 +294,27 @@ export default function AcaiScreen() {
             <Text style={styles.totalLabel}>Total:</Text>
             <Text style={styles.totalValue}>R$ {calculateTotal().toFixed(2)}</Text>
           </View>
+          {selectedSize && (selectedVerdes.length < selectedSize.verdes || selectedLaranjas.length < (selectedSize.laranjas || 2)) ? (
+            <View style={styles.missingInfo}>
+              {selectedVerdes.length < selectedSize.verdes && (
+                <Text style={styles.missingText}>
+                  Faltam {selectedSize.verdes - selectedVerdes.length} opções VERDES
+                </Text>
+              )}
+              {selectedLaranjas.length < (selectedSize.laranjas || 2) && (
+                <Text style={styles.missingText}>
+                  Faltam {(selectedSize.laranjas || 2) - selectedLaranjas.length} opções LARANJAS
+                </Text>
+              )}
+            </View>
+          ) : null}
           <TouchableOpacity
-            style={styles.addButton}
+            style={[
+              styles.addButton,
+              selectedSize && (selectedVerdes.length < selectedSize.verdes || selectedLaranjas.length < (selectedSize.laranjas || 2))
+                ? styles.addButtonDisabled
+                : null,
+            ]}
             onPress={addToCart}
           >
             <Text style={styles.addButtonText}>Adicionar ao Carrinho</Text>
@@ -511,9 +542,24 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
   },
+  addButtonDisabled: {
+    backgroundColor: '#CCCCCC',
+  },
   addButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  missingInfo: {
+    backgroundColor: '#FFF3E0',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 10,
+  },
+  missingText: {
+    fontSize: 13,
+    color: '#E65100',
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });
