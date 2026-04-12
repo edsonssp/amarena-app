@@ -201,9 +201,9 @@ const styles = StyleSheet.create({
     borderColor: '#FFFFFF',
   },
   logoImage: {
-    width: 89,
-    height: 89,
-    borderRadius: 45,
+    width: 78,
+    height: 78,
+    borderRadius: 39,
   },
   logoTextContainer: {
     flex: 1,
