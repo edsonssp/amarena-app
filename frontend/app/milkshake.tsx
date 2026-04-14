@@ -239,6 +239,18 @@ const styles = StyleSheet.create({
     color: '#888',
     marginBottom: 12,
   },
+  saborInput: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 20,
+    marginTop: 8,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+  },
   sizesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
