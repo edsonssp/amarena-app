@@ -6,6 +6,10 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -48,9 +52,13 @@ export default function MilkshakeScreen() {
   };
 
   const addToCart = () => {
-    if (!selectedSize) return;
+    Keyboard.dismiss();
+    if (!selectedSize) {
+      Alert.alert('Atenção', 'Selecione o tamanho do Milkshake!');
+      return;
+    }
     if (!sabor.trim()) {
-      alert('Digite o sabor do Milkshake!');
+      Alert.alert('Atenção', 'Digite o sabor do Milkshake!');
       return;
     }
 
@@ -67,9 +75,11 @@ export default function MilkshakeScreen() {
       price: calculateTotal(),
       description: detalhes,
     });
-    alert('Milkshake adicionado ao carrinho! ✅');
+    Alert.alert('Sucesso', 'Milkshake adicionado ao carrinho! ✅');
     router.back();
   };
+
+  const canAddToCart = selectedSize !== null && sabor.trim().length > 0;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -82,7 +92,15 @@ export default function MilkshakeScreen() {
         <View style={styles.placeholder} />
       </View>
 
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }} 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView 
+          style={styles.content} 
+          contentContainerStyle={styles.contentContainer}
+          keyboardShouldPersistTaps="handled"
+        >
         {/* Banner */}
         <View style={styles.banner}>
           <MaterialCommunityIcons name="cup" size={50} color="#FFFFFF" />
@@ -160,6 +178,7 @@ export default function MilkshakeScreen() {
           );
         })}
       </ScrollView>
+      </KeyboardAvoidingView>
 
       {/* Footer */}
       <View style={styles.footer}>
@@ -167,11 +186,17 @@ export default function MilkshakeScreen() {
           <Text style={styles.totalLabel}>Total:</Text>
           <Text style={styles.totalValue}>R$ {calculateTotal().toFixed(2)}</Text>
         </View>
+        {!canAddToCart && (
+          <Text style={styles.missingInfo}>
+            {!sabor.trim() && !selectedSize ? 'Digite o sabor e escolha o tamanho' :
+             !sabor.trim() ? 'Digite o sabor do milkshake' : 'Escolha o tamanho'}
+          </Text>
+        )}
         <TouchableOpacity
-          style={[styles.addButton, (!selectedSize || !sabor.trim()) && styles.addButtonDisabled]}
+          style={[styles.addButton, !canAddToCart && styles.addButtonDisabled]}
           onPress={addToCart}
-          disabled={!selectedSize || !sabor.trim()}
         >
+          <MaterialCommunityIcons name="cart-plus" size={22} color="#FFFFFF" />
           <Text style={styles.addButtonText}>Adicionar ao Carrinho</Text>
         </TouchableOpacity>
       </View>
@@ -355,6 +380,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
   },
   addButtonDisabled: {
     backgroundColor: '#CCCCCC',
@@ -363,5 +390,13 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  missingInfo: {
+    fontSize: 13,
+    color: '#E53935',
+    textAlign: 'center',
+    marginBottom: 8,
+    fontWeight: '500',
   },
 });
