@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -30,6 +31,7 @@ export default function MilkshakeScreen() {
   const { addItem } = useCart();
   const [selectedSize, setSelectedSize] = useState<any>(null);
   const [selectedExtras, setSelectedExtras] = useState<any[]>([]);
+  const [sabor, setSabor] = useState('');
 
   const toggleExtra = (extra: any) => {
     if (selectedExtras.find(e => e.name === extra.name)) {
@@ -47,6 +49,10 @@ export default function MilkshakeScreen() {
 
   const addToCart = () => {
     if (!selectedSize) return;
+    if (!sabor.trim()) {
+      alert('Digite o sabor do Milkshake!');
+      return;
+    }
 
     let detalhes = '';
     if (selectedExtras.length > 0) {
@@ -56,7 +62,7 @@ export default function MilkshakeScreen() {
     addItem({
       id: `milkshake-${selectedSize.size}-${Date.now()}`,
       productId: `milkshake-${selectedSize.size}`,
-      productName: `Milkshake ${selectedSize.size}`,
+      productName: `Milkshake ${sabor.trim()} ${selectedSize.size}`,
       quantity: 1,
       price: calculateTotal(),
       description: detalhes,
@@ -83,6 +89,16 @@ export default function MilkshakeScreen() {
           <Text style={styles.bannerTitle}>Milkshake Amarena</Text>
           <Text style={styles.bannerSubtitle}>Cremoso e irresistível!</Text>
         </View>
+
+        {/* Sabor */}
+        <Text style={styles.sectionTitle}>Qual o Sabor?</Text>
+        <TextInput
+          style={styles.saborInput}
+          value={sabor}
+          onChangeText={setSabor}
+          placeholder="Ex: Chocolate, Morango, Oreo..."
+          placeholderTextColor="#999"
+        />
 
         {/* Tamanhos */}
         <Text style={styles.sectionTitle}>Escolha o Tamanho</Text>
@@ -152,9 +168,9 @@ export default function MilkshakeScreen() {
           <Text style={styles.totalValue}>R$ {calculateTotal().toFixed(2)}</Text>
         </View>
         <TouchableOpacity
-          style={[styles.addButton, !selectedSize && styles.addButtonDisabled]}
+          style={[styles.addButton, (!selectedSize || !sabor.trim()) && styles.addButtonDisabled]}
           onPress={addToCart}
-          disabled={!selectedSize}
+          disabled={!selectedSize || !sabor.trim()}
         >
           <Text style={styles.addButtonText}>Adicionar ao Carrinho</Text>
         </TouchableOpacity>

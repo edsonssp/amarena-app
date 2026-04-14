@@ -19,11 +19,13 @@ import axios from 'axios';
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
 type PaymentMethod = 'pix' | 'cartao' | 'entrega' | null;
+type DeliveryMode = 'entrega' | 'retirada';
 
 export default function CheckoutScreen() {
   const router = useRouter();
   const { items, getTotalPrice, clearCart } = useCart();
   const [selectedPayment, setSelectedPayment] = useState<PaymentMethod>(null);
+  const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>('entrega');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerStreet, setCustomerStreet] = useState('');
@@ -32,21 +34,22 @@ export default function CheckoutScreen() {
   const [customerComplement, setCustomerComplement] = useState('');
   const [observation, setObservation] = useState('');
   const [loading, setLoading] = useState(false);
-  const [deliveryFee, setDeliveryFee] = useState(0);
+  const [deliveryFeeBase, setDeliveryFeeBase] = useState(0);
   const [isWeekend, setIsWeekend] = useState(false);
 
   const total = getTotalPrice();
+  const deliveryFee = deliveryMode === 'retirada' ? 0 : deliveryFeeBase;
   const totalWithDelivery = total + deliveryFee;
 
   useEffect(() => {
     const fetchDeliveryFee = async () => {
       try {
         const response = await axios.get(`${API_URL}/api/delivery-fee`);
-        setDeliveryFee(response.data.currentFee);
+        setDeliveryFeeBase(response.data.currentFee);
         setIsWeekend(response.data.isWeekend);
       } catch (error) {
         console.error('Error fetching delivery fee:', error);
-        setDeliveryFee(5);
+        setDeliveryFeeBase(5);
       }
     };
     fetchDeliveryFee();
@@ -57,15 +60,20 @@ export default function CheckoutScreen() {
     if (customerName) message += `👤 *Cliente:* ${customerName}\n`;
     if (customerPhone) message += `📱 *Telefone:* ${customerPhone}\n`;
     
-    // Endereço de entrega
-    const addressParts = [customerStreet, customerNumber, customerComplement, customerNeighborhood].filter(p => p.trim());
-    if (addressParts.length > 0) {
-      message += `\n📍 *Endereço de Entrega:*\n`;
-      message += `  ${customerStreet}`;
-      if (customerNumber) message += `, ${customerNumber}`;
-      message += `\n`;
-      if (customerComplement) message += `  ${customerComplement}\n`;
-      if (customerNeighborhood) message += `  ${customerNeighborhood} - Passos/MG\n`;
+    if (deliveryMode === 'retirada') {
+      message += `\n🏪 *RETIRADA NA SORVETERIA*\n`;
+      message += `  Rua Dois de Novembro - Centro, Passos/MG\n`;
+    } else {
+      // Endereço de entrega
+      const addressParts = [customerStreet, customerNumber, customerComplement, customerNeighborhood].filter(p => p.trim());
+      if (addressParts.length > 0) {
+        message += `\n📍 *Endereço de Entrega:*\n`;
+        message += `  ${customerStreet}`;
+        if (customerNumber) message += `, ${customerNumber}`;
+        message += `\n`;
+        if (customerComplement) message += `  ${customerComplement}\n`;
+        if (customerNeighborhood) message += `  ${customerNeighborhood} - Passos/MG\n`;
+      }
     }
     message += `\n📋 *Itens do Pedido:*\n`;
     items.forEach((item) => {
@@ -75,7 +83,11 @@ export default function CheckoutScreen() {
       }
     });
     message += `\n💰 *Total: R$ ${totalWithDelivery.toFixed(2)}*\n`;
-    message += `  (Produtos: R$ ${total.toFixed(2)} + Entrega: R$ ${deliveryFee.toFixed(2)})\n`;
+    if (deliveryMode === 'retirada') {
+      message += `  (Produtos: R$ ${total.toFixed(2)} — Retirada no local)\n`;
+    } else {
+      message += `  (Produtos: R$ ${total.toFixed(2)} + Entrega: R$ ${deliveryFee.toFixed(2)})\n`;
+    }
     if (selectedPayment) {
       const paymentLabels: Record<string, string> = {
         pix: 'PIX',
@@ -90,8 +102,11 @@ export default function CheckoutScreen() {
   };
 
   const createOrder = async () => {
-    const addressParts = [customerStreet, customerNumber, customerComplement, customerNeighborhood].filter(p => p.trim());
-    const address = addressParts.join(', ') + ' - Passos/MG';
+    let address = 'RETIRADA NA SORVETERIA - Rua Dois de Novembro, Centro, Passos/MG';
+    if (deliveryMode === 'entrega') {
+      const addressParts = [customerStreet, customerNumber, customerComplement, customerNeighborhood].filter(p => p.trim());
+      address = addressParts.join(', ') + ' - Passos/MG';
+    }
 
     const orderData = {
       items: items.map(item => ({
@@ -104,6 +119,7 @@ export default function CheckoutScreen() {
       customerName: customerName.trim(),
       customerPhone: customerPhone.trim(),
       customerAddress: address,
+      deliveryMode: deliveryMode,
       observation: observation.trim(),
       paymentMethod: selectedPayment,
     };
@@ -133,8 +149,11 @@ export default function CheckoutScreen() {
       description: item.description || '',
     }));
 
-    const addressParts = [customerStreet, customerNumber, customerComplement, customerNeighborhood].filter(p => p.trim());
-    const address = addressParts.join(', ') + ' - Passos/MG';
+    let address = 'RETIRADA NA SORVETERIA';
+    if (deliveryMode === 'entrega') {
+      const addressParts = [customerStreet, customerNumber, customerComplement, customerNeighborhood].filter(p => p.trim());
+      address = addressParts.join(', ') + ' - Passos/MG';
+    }
 
     router.push({
       pathname: '/ticket',
@@ -162,17 +181,19 @@ export default function CheckoutScreen() {
       Alert.alert('Atenção', 'Digite seu nome para o pedido!');
       return;
     }
-    if (!customerStreet.trim()) {
-      Alert.alert('Atenção', 'Digite a rua para entrega!');
-      return;
-    }
-    if (!customerNumber.trim()) {
-      Alert.alert('Atenção', 'Digite o número da casa/apto!');
-      return;
-    }
-    if (!customerNeighborhood.trim()) {
-      Alert.alert('Atenção', 'Digite o bairro para entrega!');
-      return;
+    if (deliveryMode === 'entrega') {
+      if (!customerStreet.trim()) {
+        Alert.alert('Atenção', 'Digite a rua para entrega!');
+        return;
+      }
+      if (!customerNumber.trim()) {
+        Alert.alert('Atenção', 'Digite o número da casa/apto!');
+        return;
+      }
+      if (!customerNeighborhood.trim()) {
+        Alert.alert('Atenção', 'Digite o bairro para entrega!');
+        return;
+      }
     }
 
     setLoading(true);
@@ -286,15 +307,75 @@ export default function CheckoutScreen() {
           </View>
           <View style={styles.deliveryRow}>
             <View style={styles.deliveryInfo}>
-              <MaterialCommunityIcons name="moped" size={18} color="#4CAF50" />
-              <Text style={styles.deliveryLabel}>Entrega {isWeekend ? '(Fim de Semana)' : '(Dia de Semana)'}:</Text>
+              {deliveryMode === 'retirada' ? (
+                <>
+                  <Ionicons name="storefront" size={18} color="#4CAF50" />
+                  <Text style={styles.deliveryLabel}>Retirada na sorveteria:</Text>
+                </>
+              ) : (
+                <>
+                  <MaterialCommunityIcons name="moped" size={18} color="#4CAF50" />
+                  <Text style={styles.deliveryLabel}>Entrega {isWeekend ? '(Fim de Semana)' : '(Dia de Semana)'}:</Text>
+                </>
+              )}
             </View>
-            <Text style={styles.deliveryValue}>R$ {deliveryFee.toFixed(2)}</Text>
+            <Text style={[styles.deliveryValue, deliveryMode === 'retirada' && { color: '#4CAF50', fontWeight: 'bold' }]}>
+              {deliveryMode === 'retirada' ? 'GRÁTIS' : `R$ ${deliveryFee.toFixed(2)}`}
+            </Text>
           </View>
           <View style={styles.totalFinalRow}>
             <Text style={styles.totalLabel}>Total:</Text>
             <Text style={styles.totalValue}>R$ {totalWithDelivery.toFixed(2)}</Text>
           </View>
+        </View>
+
+        {/* Modo de Recebimento */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Como deseja receber?</Text>
+          <View style={styles.deliveryModeRow}>
+            <TouchableOpacity
+              style={[
+                styles.deliveryModeBtn,
+                deliveryMode === 'entrega' && styles.deliveryModeBtnSelected,
+              ]}
+              onPress={() => setDeliveryMode('entrega')}
+            >
+              <MaterialCommunityIcons
+                name="moped"
+                size={26}
+                color={deliveryMode === 'entrega' ? '#FFFFFF' : '#E53935'}
+              />
+              <Text style={[
+                styles.deliveryModeText,
+                deliveryMode === 'entrega' && styles.deliveryModeTextSelected,
+              ]}>Entrega</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.deliveryModeBtn,
+                deliveryMode === 'retirada' && styles.deliveryModeBtnSelectedGreen,
+              ]}
+              onPress={() => setDeliveryMode('retirada')}
+            >
+              <Ionicons
+                name="storefront"
+                size={26}
+                color={deliveryMode === 'retirada' ? '#FFFFFF' : '#4CAF50'}
+              />
+              <Text style={[
+                styles.deliveryModeText,
+                deliveryMode === 'retirada' && styles.deliveryModeTextSelected,
+              ]}>Retirada na Sorveteria</Text>
+            </TouchableOpacity>
+          </View>
+          {deliveryMode === 'retirada' && (
+            <View style={styles.pickupInfo}>
+              <Ionicons name="location" size={18} color="#4CAF50" />
+              <Text style={styles.pickupInfoText}>
+                Rua Dois de Novembro - Centro, Passos/MG
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Dados do Cliente */}
@@ -317,7 +398,8 @@ export default function CheckoutScreen() {
           />
         </View>
 
-        {/* Endereço de Entrega */}
+        {/* Endereço de Entrega - só mostra se for entrega */}
+        {deliveryMode === 'entrega' && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Ionicons name="location" size={22} color="#E53935" />
@@ -359,6 +441,7 @@ export default function CheckoutScreen() {
             <Text style={styles.cityText}>Passos - MG</Text>
           </View>
         </View>
+        )}
 
         {/* Observações */}
         <View style={styles.section}>
@@ -705,6 +788,56 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#4CAF50',
+  },
+  deliveryModeRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  deliveryModeBtn: {
+    flex: 1,
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 8,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+    minHeight: 90,
+  },
+  deliveryModeBtnSelected: {
+    backgroundColor: '#E53935',
+    borderColor: '#E53935',
+  },
+  deliveryModeBtnSelectedGreen: {
+    backgroundColor: '#4CAF50',
+    borderColor: '#4CAF50',
+  },
+  deliveryModeText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  deliveryModeTextSelected: {
+    color: '#FFFFFF',
+  },
+  pickupInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F5E9',
+    padding: 14,
+    borderRadius: 12,
+    marginTop: 14,
+  },
+  pickupInfoText: {
+    marginLeft: 8,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#4CAF50',
+    flex: 1,
   },
   paymentOption: {
     flexDirection: 'row',
