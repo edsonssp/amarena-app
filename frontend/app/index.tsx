@@ -46,9 +46,9 @@ export default function HomeScreen() {
       color: '#E53935',
     },
     {
-      title: 'Temporada',
-      icon: 'gift',
-      route: '/temporada',
+      title: 'Milkshake',
+      icon: 'cup',
+      route: '/milkshake',
       color: '#4CAF50',
     },
     {
