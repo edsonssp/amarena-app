@@ -553,7 +553,12 @@ async def get_stats(user=Depends(verify_token)):
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok", "database": "connected"}
+    try:
+        # Test DB connection
+        db.command("ping")
+        return {"status": "ok", "database": "connected"}
+    except Exception:
+        return {"status": "ok", "database": "disconnected"}
 
 @app.get("/api/download/backup")
 async def download_backup():
