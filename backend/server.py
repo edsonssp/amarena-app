@@ -29,7 +29,10 @@ app.add_middleware(
 # MongoDB
 MONGO_URL = os.getenv("MONGO_URL")
 DB_NAME = os.getenv("DB_NAME")
-client = MongoClient(MONGO_URL, tlsCAFile=certifi.where())
+if MONGO_URL and "mongodb+srv" in MONGO_URL:
+    client = MongoClient(MONGO_URL, tlsCAFile=certifi.where())
+else:
+    client = MongoClient(MONGO_URL)
 db = client[DB_NAME]
 
 # Mercado Pago
