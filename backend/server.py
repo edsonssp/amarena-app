@@ -565,11 +565,11 @@ async def download_backup():
     from fastapi.responses import FileResponse
     import os
     
-    file_path = "/app/amarena-sorvetes-backup.zip"
+    file_path = "/app/amarena_passos_backup.zip"
     if os.path.exists(file_path):
         return FileResponse(
             path=file_path,
-            filename="amarena-sorvetes-backup.zip",
+            filename="amarena_passos_backup.zip",
             media_type="application/zip"
         )
     else:
