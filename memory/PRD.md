@@ -36,6 +36,12 @@ Criar um app Android para vendas da sorveteria AMARENA.PASSOS em Passos, MG.
 - Correções de bugs no Milkshake (teclado/estilo)
 - Deploy do backend no Render.com com Docker ✅ (17/04/2026)
 - Correção SSL MongoDB Atlas (certifi + Network Access 0.0.0.0/0)
+- **Sistema de Cupons de Desconto** ✅ (17/04/2026)
+  - Backend: CRUD completo + validação pública + incremento de uso
+  - Checkout: Campo de cupom com validação em tempo real + desconto no resumo
+  - Admin: Criar/Listar/Ativar-Desativar/Excluir cupons
+  - Tipos: Percentual (%) e Valor Fixo (R$)
+  - Regras: Pedido mínimo, limite de usos, data de expiração
 
 ### 🔜 Próximas Tarefas (P1)
 - Conectar app Expo ao backend do Render (EXPO_PUBLIC_BACKEND_URL)
