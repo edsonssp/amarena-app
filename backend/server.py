@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 import bcrypt
 import jwt
 import mercadopago
+import certifi
 
 load_dotenv()
 
@@ -28,7 +29,7 @@ app.add_middleware(
 # MongoDB
 MONGO_URL = os.getenv("MONGO_URL")
 DB_NAME = os.getenv("DB_NAME")
-client = MongoClient(MONGO_URL)
+client = MongoClient(MONGO_URL, tlsCAFile=certifi.where())
 db = client[DB_NAME]
 
 # Mercado Pago
