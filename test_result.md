@@ -177,6 +177,18 @@ backend:
           agent: "testing"
           comment: "POST /api/payment/create working correctly. Successfully creates payment preferences and returns preferenceId, initPoint, and publicKey"
 
+  - task: "Coupon System API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "Sistema completo de cupons testado com 100% de sucesso. Todos os endpoints funcionando: criação de cupons (percentual/fixo), validação, listagem, ativação/desativação, exclusão. Validação case-insensitive, verificação de valor mínimo, limite de usos, e cupom AMARENA10 existente funcionando corretamente. 14 testes específicos de cupons passaram."
+
 frontend:
   - task: "Home Screen UI and Navigation"
     implemented: true
@@ -306,9 +318,9 @@ metadata:
 
 test_plan:
   current_focus:
-    - "All frontend screens tested and working"
-    - "Critical Açaí two-column layout verified"
-    - "Admin panel with image upload confirmed"
+    - "Coupon System API testing completed successfully"
+    - "All backend APIs tested and working"
+    - "Frontend screens tested and working"
   stuck_tasks: []
   test_all: true
   test_priority: "completed"
@@ -318,3 +330,5 @@ agent_communication:
       message: "Completed comprehensive backend API testing for Amarena Sorvetes. All 8 test cases passed (100% success rate). Fixed minor issue with Mercado Pago test where parameters needed to be sent as query params instead of JSON body. All core backend functionality is working correctly including authentication, CRUD operations, and payment integration."
     - agent: "testing"
       message: "✅ COMPREHENSIVE FRONTEND TESTING COMPLETED - All screens tested successfully on mobile (360x800). CRITICAL FINDINGS: ✅ Home screen perfect with logo and 6 menu buttons ✅ Açaí NEW TWO-COLUMN LAYOUT working (orange left/green right) ✅ Admin panel with image upload functional ✅ All navigation working ✅ WhatsApp contact screen complete ✅ Empty states properly handled for Sorvetes/Picolés/Promoções/Temporada. Minor: Some deprecated shadow props warnings and invalid 'popsicle' icon name, but core functionality unaffected. App is fully functional and mobile-responsive."
+    - agent: "testing"
+      message: "✅ SISTEMA DE CUPONS TESTADO COM 100% DE SUCESSO - Executados 14 testes específicos do sistema de cupons conforme solicitado. Todos os cenários funcionando perfeitamente: criação de cupons (TESTE20 percentual 20%, DESCONTO5 fixo R$5), validação com verificação de valor mínimo, case-insensitive, ativação/desativação, exclusão, e cupom AMARENA10 existente. API completa e robusta. Total: 22 testes backend (100% aprovação)."

@@ -113,6 +113,21 @@ class Order(BaseModel):
     paymentMethod: str  # pix, cartao, entrega
     status: str = "pending"
     paymentId: Optional[str] = None
+    couponCode: Optional[str] = None
+    couponDiscount: Optional[float] = None
+
+class Coupon(BaseModel):
+    code: str
+    discountType: str = "percentage"  # percentage or fixed
+    discountValue: float
+    minOrderValue: float = 0
+    maxUses: int = 0  # 0 = unlimited
+    expiresAt: str = ""  # DD/MM/YYYY
+    isActive: bool = True
+
+class CouponValidate(BaseModel):
+    code: str
+    orderTotal: float
 
 class AdminLogin(BaseModel):
     username: str
@@ -380,6 +395,13 @@ async def create_order(order: Order):
         order_dict["createdAt"] = datetime.now()
         result = db.orders.insert_one(order_dict)
         order_id = str(result.inserted_id)
+        
+        if order.couponCode:
+            db.coupons.update_one(
+                {"code": order.couponCode.upper()},
+                {"$inc": {"usedCount": 1}}
+            )
+        
         return {"orderId": order_id, "status": "pending"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -539,6 +561,87 @@ async def payment_webhook(data: dict):
     except Exception as e:
         print(f"Webhook error: {e}")
         return {"status": "error"}
+
+# Coupon endpoints
+@app.get("/api/coupons")
+async def get_coupons(user=Depends(verify_token)):
+    coupons = list(db.coupons.find())
+    return [serialize_doc(c) for c in coupons]
+
+@app.post("/api/coupons")
+async def create_coupon(coupon: Coupon, user=Depends(verify_token)):
+    existing = db.coupons.find_one({"code": coupon.code.upper()})
+    if existing:
+        raise HTTPException(status_code=400, detail="Já existe um cupom com este código")
+    coupon_dict = coupon.dict()
+    coupon_dict["code"] = coupon_dict["code"].upper()
+    coupon_dict["usedCount"] = 0
+    coupon_dict["createdAt"] = datetime.now()
+    result = db.coupons.insert_one(coupon_dict)
+    return {"id": str(result.inserted_id), "message": "Cupom criado com sucesso"}
+
+@app.delete("/api/coupons/{coupon_id}")
+async def delete_coupon(coupon_id: str, user=Depends(verify_token)):
+    result = db.coupons.delete_one({"_id": ObjectId(coupon_id)})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Cupom não encontrado")
+    return {"message": "Cupom excluído com sucesso"}
+
+@app.put("/api/coupons/{coupon_id}/toggle")
+async def toggle_coupon(coupon_id: str, user=Depends(verify_token)):
+    coupon = db.coupons.find_one({"_id": ObjectId(coupon_id)})
+    if not coupon:
+        raise HTTPException(status_code=404, detail="Cupom não encontrado")
+    new_status = not coupon.get("isActive", True)
+    db.coupons.update_one(
+        {"_id": ObjectId(coupon_id)},
+        {"$set": {"isActive": new_status}}
+    )
+    return {"message": "Status do cupom atualizado", "isActive": new_status}
+
+@app.post("/api/coupons/validate")
+async def validate_coupon(data: CouponValidate):
+    coupon = db.coupons.find_one({"code": data.code.upper(), "isActive": True})
+    if not coupon:
+        raise HTTPException(status_code=404, detail="Cupom inválido ou expirado")
+    
+    if coupon.get("maxUses", 0) > 0 and coupon.get("usedCount", 0) >= coupon["maxUses"]:
+        raise HTTPException(status_code=400, detail="Cupom já atingiu o limite de usos")
+    
+    if coupon.get("minOrderValue", 0) > 0 and data.orderTotal < coupon["minOrderValue"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Pedido mínimo de R$ {coupon['minOrderValue']:.2f} para usar este cupom"
+        )
+    
+    if coupon.get("expiresAt"):
+        try:
+            parts = coupon["expiresAt"].split("/")
+            if len(parts) == 3:
+                exp_date = datetime(int(parts[2]), int(parts[1]), int(parts[0]), 23, 59, 59)
+                if datetime.now() > exp_date:
+                    raise HTTPException(status_code=400, detail="Cupom expirado")
+        except (ValueError, IndexError):
+            pass
+    
+    discount_type = coupon.get("discountType", "percentage")
+    discount_value = coupon.get("discountValue", 0)
+    
+    if discount_type == "percentage":
+        discount_amount = round(data.orderTotal * (discount_value / 100), 2)
+        discount_label = f"{discount_value}% de desconto"
+    else:
+        discount_amount = min(discount_value, data.orderTotal)
+        discount_label = f"R$ {discount_value:.2f} de desconto"
+    
+    return {
+        "valid": True,
+        "code": coupon["code"],
+        "discountType": discount_type,
+        "discountValue": discount_value,
+        "discountAmount": discount_amount,
+        "discountLabel": discount_label,
+    }
 
 # Dashboard stats
 @app.get("/api/admin/stats")

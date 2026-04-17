@@ -36,10 +36,14 @@ export default function CheckoutScreen() {
   const [loading, setLoading] = useState(false);
   const [deliveryFeeBase, setDeliveryFeeBase] = useState(0);
   const [isWeekend, setIsWeekend] = useState(false);
+  const [couponCode, setCouponCode] = useState('');
+  const [couponApplied, setCouponApplied] = useState<any>(null);
+  const [couponLoading, setCouponLoading] = useState(false);
 
   const total = getTotalPrice();
   const deliveryFee = deliveryMode === 'retirada' ? 0 : deliveryFeeBase;
-  const totalWithDelivery = total + deliveryFee;
+  const couponDiscount = couponApplied ? couponApplied.discountAmount : 0;
+  const totalWithDelivery = Math.max(0, total + deliveryFee - couponDiscount);
 
   useEffect(() => {
     const fetchDeliveryFee = async () => {
@@ -54,6 +58,33 @@ export default function CheckoutScreen() {
     };
     fetchDeliveryFee();
   }, []);
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) {
+      Alert.alert('Atenção', 'Digite o código do cupom');
+      return;
+    }
+    setCouponLoading(true);
+    try {
+      const response = await axios.post(`${API_URL}/api/coupons/validate`, {
+        code: couponCode.trim(),
+        orderTotal: total,
+      });
+      setCouponApplied(response.data);
+      Alert.alert('Cupom Aplicado! 🎉', response.data.discountLabel);
+    } catch (error: any) {
+      const msg = error?.response?.data?.detail || 'Cupom inválido';
+      Alert.alert('Cupom Inválido', msg);
+      setCouponApplied(null);
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setCouponApplied(null);
+    setCouponCode('');
+  };
 
   const buildOrderMessage = () => {
     let message = `🍦 *PEDIDO AMARENA SORVETES*\n\n`;
@@ -82,6 +113,9 @@ export default function CheckoutScreen() {
         message += `    ${item.description}\n`;
       }
     });
+    if (couponApplied) {
+      message += `\n🎟️ *Cupom:* ${couponApplied.code} (-R$ ${couponDiscount.toFixed(2)})\n`;
+    }
     message += `\n💰 *Total: R$ ${totalWithDelivery.toFixed(2)}*\n`;
     if (deliveryMode === 'retirada') {
       message += `  (Produtos: R$ ${total.toFixed(2)} — Retirada no local)\n`;
@@ -122,6 +156,8 @@ export default function CheckoutScreen() {
       deliveryMode: deliveryMode,
       observation: observation.trim(),
       paymentMethod: selectedPayment,
+      couponCode: couponApplied ? couponApplied.code : null,
+      couponDiscount: couponDiscount > 0 ? couponDiscount : null,
     };
 
     console.log('Creating order...', API_URL);
@@ -323,6 +359,15 @@ export default function CheckoutScreen() {
               {deliveryMode === 'retirada' ? 'GRÁTIS' : `R$ ${deliveryFee.toFixed(2)}`}
             </Text>
           </View>
+          {couponApplied && (
+            <View style={styles.couponDiscountRow}>
+              <View style={styles.deliveryInfo}>
+                <MaterialCommunityIcons name="ticket-percent" size={18} color="#9C27B0" />
+                <Text style={styles.couponDiscountLabel}>Cupom {couponApplied.code}:</Text>
+              </View>
+              <Text style={styles.couponDiscountValue}>-R$ {couponDiscount.toFixed(2)}</Text>
+            </View>
+          )}
           <View style={styles.totalFinalRow}>
             <Text style={styles.totalLabel}>Total:</Text>
             <Text style={styles.totalValue}>R$ {totalWithDelivery.toFixed(2)}</Text>
@@ -455,6 +500,56 @@ export default function CheckoutScreen() {
             multiline
             numberOfLines={3}
           />
+        </View>
+
+        {/* Cupom de Desconto */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <MaterialCommunityIcons name="ticket-percent" size={22} color="#9C27B0" />
+            <Text style={styles.sectionTitle}> Cupom de Desconto</Text>
+          </View>
+          {couponApplied ? (
+            <View style={styles.couponAppliedBox}>
+              <View style={styles.couponAppliedInfo}>
+                <MaterialCommunityIcons name="check-circle" size={24} color="#4CAF50" />
+                <View style={{ marginLeft: 10, flex: 1 }}>
+                  <Text style={styles.couponAppliedCode}>{couponApplied.code}</Text>
+                  <Text style={styles.couponAppliedLabel}>{couponApplied.discountLabel}</Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                testID="remove-coupon-btn"
+                onPress={handleRemoveCoupon}
+                style={styles.couponRemoveBtn}
+              >
+                <Ionicons name="close-circle" size={24} color="#E53935" />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.couponInputRow}>
+              <TextInput
+                testID="coupon-code-input"
+                style={styles.couponInput}
+                placeholder="Digite o código"
+                placeholderTextColor="#999"
+                value={couponCode}
+                onChangeText={setCouponCode}
+                autoCapitalize="characters"
+              />
+              <TouchableOpacity
+                testID="apply-coupon-btn"
+                style={styles.couponApplyBtn}
+                onPress={handleApplyCoupon}
+                disabled={couponLoading}
+              >
+                {couponLoading ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.couponApplyText}>Aplicar</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         {/* Forma de Pagamento */}
@@ -920,5 +1015,79 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: 'bold',
     marginLeft: 10,
+  },
+  couponInputRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  couponInput: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: '#333',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    fontWeight: 'bold',
+    letterSpacing: 1,
+  },
+  couponApplyBtn: {
+    backgroundColor: '#9C27B0',
+    borderRadius: 12,
+    paddingHorizontal: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 90,
+  },
+  couponApplyText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
+  couponAppliedBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#E8F5E9',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#4CAF50',
+  },
+  couponAppliedInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  couponAppliedCode: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2E7D32',
+  },
+  couponAppliedLabel: {
+    fontSize: 13,
+    color: '#4CAF50',
+    marginTop: 2,
+  },
+  couponRemoveBtn: {
+    padding: 4,
+  },
+  couponDiscountRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  couponDiscountLabel: {
+    fontSize: 14,
+    color: '#9C27B0',
+    marginLeft: 6,
+  },
+  couponDiscountValue: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#9C27B0',
   },
 });

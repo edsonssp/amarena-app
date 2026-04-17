@@ -31,13 +31,24 @@ export default function AdminDashboardScreen() {
   const [showSeasonsList, setShowSeasonsList] = useState(false);
   const [showDeliveryFee, setShowDeliveryFee] = useState(false);
   const [showOrders, setShowOrders] = useState(false);
+  const [showCoupons, setShowCoupons] = useState(false);
+  const [showAddCoupon, setShowAddCoupon] = useState(false);
   const [products, setProducts] = useState([]);
   const [promotions, setPromotions] = useState([]);
   const [seasons, setSeasons] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [coupons, setCoupons] = useState([]);
   const [deliveryFee, setDeliveryFee] = useState({ weekdayFee: '5.00', weekendFee: '8.00' });
   const [editingProduct, setEditingProduct] = useState(null);
   const [token, setToken] = useState('');
+  const [newCoupon, setNewCoupon] = useState({
+    code: '',
+    discountType: 'percentage',
+    discountValue: '',
+    minOrderValue: '',
+    maxUses: '',
+    expiresAt: '',
+  });
   const [newProduct, setNewProduct] = useState({
     name: '',
     category: 'sorvetes',
@@ -260,6 +271,79 @@ export default function AdminDashboardScreen() {
       fetchOrders();
     } catch (error) {
       Alert.alert('Erro', 'Não foi possível atualizar o status');
+    }
+  };
+
+  const fetchCoupons = async () => {
+    try {
+      const adminToken = await AsyncStorage.getItem('adminToken');
+      const response = await axios.get(`${API_URL}/api/coupons`, {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+      setCoupons(response.data);
+    } catch (error) {
+      console.error('Error fetching coupons:', error);
+    }
+  };
+
+  const handleAddCoupon = async () => {
+    if (!newCoupon.code || !newCoupon.discountValue) {
+      Alert.alert('Erro', 'Preencha pelo menos o código e o valor do desconto');
+      return;
+    }
+    try {
+      await axios.post(
+        `${API_URL}/api/coupons`,
+        {
+          code: newCoupon.code.toUpperCase(),
+          discountType: newCoupon.discountType,
+          discountValue: parseFloat(newCoupon.discountValue),
+          minOrderValue: newCoupon.minOrderValue ? parseFloat(newCoupon.minOrderValue) : 0,
+          maxUses: newCoupon.maxUses ? parseInt(newCoupon.maxUses) : 0,
+          expiresAt: newCoupon.expiresAt || '',
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      Alert.alert('Sucesso', 'Cupom criado com sucesso!');
+      setShowAddCoupon(false);
+      setNewCoupon({ code: '', discountType: 'percentage', discountValue: '', minOrderValue: '', maxUses: '', expiresAt: '' });
+      fetchCoupons();
+    } catch (error: any) {
+      const msg = error?.response?.data?.detail || 'Não foi possível criar o cupom';
+      Alert.alert('Erro', msg);
+    }
+  };
+
+  const handleDeleteCoupon = async (couponId: string) => {
+    Alert.alert('Confirmar', 'Excluir este cupom?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Excluir', style: 'destructive',
+        onPress: async () => {
+          try {
+            await axios.delete(`${API_URL}/api/coupons/${couponId}`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            Alert.alert('Sucesso', 'Cupom excluído!');
+            fetchCoupons();
+          } catch (error) {
+            Alert.alert('Erro', 'Não foi possível excluir');
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleToggleCoupon = async (couponId: string) => {
+    try {
+      await axios.put(
+        `${API_URL}/api/coupons/${couponId}/toggle`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      fetchCoupons();
+    } catch (error) {
+      Alert.alert('Erro', 'Não foi possível alterar o status');
     }
   };
 
@@ -622,6 +706,25 @@ export default function AdminDashboardScreen() {
           >
             <MaterialCommunityIcons name="moped" size={24} color="#4CAF50" />
             <Text style={styles.actionText}>Taxa de Entrega</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => setShowAddCoupon(true)}
+          >
+            <MaterialCommunityIcons name="ticket-percent" size={24} color="#9C27B0" />
+            <Text style={styles.actionText}>Criar Cupom</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => {
+              fetchCoupons();
+              setShowCoupons(true);
+            }}
+          >
+            <MaterialCommunityIcons name="ticket-confirmation" size={24} color="#9C27B0" />
+            <Text style={styles.actionText}>Ver Cupons</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -1231,6 +1334,149 @@ export default function AdminDashboardScreen() {
                     </View>
                   );
                 })
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Add Coupon Modal */}
+      <Modal visible={showAddCoupon} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Criar Cupom</Text>
+              <TouchableOpacity onPress={() => setShowAddCoupon(false)}>
+                <MaterialCommunityIcons name="close" size={24} color="#333333" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.modalForm}>
+              <Text style={styles.inputLabel}>Código do Cupom *</Text>
+              <TextInput
+                style={styles.textInput}
+                value={newCoupon.code}
+                onChangeText={(text) => setNewCoupon({ ...newCoupon, code: text.toUpperCase() })}
+                placeholder="Ex: AMARENA10"
+                autoCapitalize="characters"
+              />
+
+              <Text style={styles.inputLabel}>Tipo de Desconto</Text>
+              <View style={styles.categoryButtons}>
+                <TouchableOpacity
+                  style={[styles.categoryButton, newCoupon.discountType === 'percentage' && { backgroundColor: '#9C27B0' }]}
+                  onPress={() => setNewCoupon({ ...newCoupon, discountType: 'percentage' })}
+                >
+                  <Text style={[styles.categoryButtonText, newCoupon.discountType === 'percentage' && styles.categoryButtonTextActive]}>
+                    Percentual (%)
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.categoryButton, newCoupon.discountType === 'fixed' && { backgroundColor: '#9C27B0' }]}
+                  onPress={() => setNewCoupon({ ...newCoupon, discountType: 'fixed' })}
+                >
+                  <Text style={[styles.categoryButtonText, newCoupon.discountType === 'fixed' && styles.categoryButtonTextActive]}>
+                    Valor Fixo (R$)
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <Text style={styles.inputLabel}>
+                {newCoupon.discountType === 'percentage' ? 'Desconto (%) *' : 'Valor do Desconto (R$) *'}
+              </Text>
+              <TextInput
+                style={styles.textInput}
+                value={newCoupon.discountValue}
+                onChangeText={(text) => setNewCoupon({ ...newCoupon, discountValue: text })}
+                placeholder={newCoupon.discountType === 'percentage' ? 'Ex: 10' : 'Ex: 5.00'}
+                keyboardType="numeric"
+              />
+
+              <Text style={styles.inputLabel}>Pedido Mínimo (R$)</Text>
+              <TextInput
+                style={styles.textInput}
+                value={newCoupon.minOrderValue}
+                onChangeText={(text) => setNewCoupon({ ...newCoupon, minOrderValue: text })}
+                placeholder="Ex: 20.00 (deixe vazio para sem mínimo)"
+                keyboardType="numeric"
+              />
+
+              <Text style={styles.inputLabel}>Limite de Usos</Text>
+              <TextInput
+                style={styles.textInput}
+                value={newCoupon.maxUses}
+                onChangeText={(text) => setNewCoupon({ ...newCoupon, maxUses: text })}
+                placeholder="Ex: 50 (deixe vazio para ilimitado)"
+                keyboardType="numeric"
+              />
+
+              <Text style={styles.inputLabel}>Validade (DD/MM/AAAA)</Text>
+              <TextInput
+                style={styles.textInput}
+                value={newCoupon.expiresAt}
+                onChangeText={(text) => setNewCoupon({ ...newCoupon, expiresAt: text })}
+                placeholder="Ex: 31/12/2026 (deixe vazio para sem validade)"
+              />
+
+              <TouchableOpacity style={[styles.submitButton, { backgroundColor: '#9C27B0' }]} onPress={handleAddCoupon}>
+                <Text style={styles.submitButtonText}>Criar Cupom</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Coupons List Modal */}
+      <Modal visible={showCoupons} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Cupons</Text>
+              <TouchableOpacity onPress={() => setShowCoupons(false)}>
+                <MaterialCommunityIcons name="close" size={24} color="#333333" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.productsListScroll}>
+              {coupons.length === 0 ? (
+                <Text style={styles.emptyText}>Nenhum cupom cadastrado</Text>
+              ) : (
+                coupons.map((coupon: any) => (
+                  <View key={coupon.id} style={styles.productItemCard}>
+                    <View style={[styles.promoBadge, { backgroundColor: coupon.isActive ? '#9C27B0' : '#999' }]}>
+                      <MaterialCommunityIcons name="ticket-percent" size={20} color="#FFFFFF" />
+                    </View>
+                    <View style={styles.productItemInfo}>
+                      <Text style={styles.productItemName}>{coupon.code}</Text>
+                      <Text style={styles.productItemCategory}>
+                        {coupon.discountType === 'percentage' ? `${coupon.discountValue}% de desconto` : `R$ ${coupon.discountValue.toFixed(2)} de desconto`}
+                      </Text>
+                      <Text style={styles.productItemCategory}>
+                        Usos: {coupon.usedCount || 0}{coupon.maxUses > 0 ? `/${coupon.maxUses}` : ' (ilimitado)'}
+                        {coupon.minOrderValue > 0 ? ` | Min: R$ ${coupon.minOrderValue.toFixed(2)}` : ''}
+                      </Text>
+                      {coupon.expiresAt ? (
+                        <Text style={styles.productItemCategory}>Validade: {coupon.expiresAt}</Text>
+                      ) : null}
+                    </View>
+                    <View style={styles.productItemActions}>
+                      <TouchableOpacity
+                        style={[styles.editIconButton, { backgroundColor: coupon.isActive ? '#E8F5E9' : '#FFF3E0' }]}
+                        onPress={() => handleToggleCoupon(coupon.id)}
+                      >
+                        <MaterialCommunityIcons
+                          name={coupon.isActive ? 'toggle-switch' : 'toggle-switch-off'}
+                          size={20}
+                          color={coupon.isActive ? '#4CAF50' : '#FF9800'}
+                        />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.deleteIconButton}
+                        onPress={() => handleDeleteCoupon(coupon.id)}
+                      >
+                        <MaterialCommunityIcons name="delete" size={20} color="#FF5252" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))
               )}
             </ScrollView>
           </View>
