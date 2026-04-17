@@ -442,9 +442,9 @@ async def create_card_payment(order_id: str, total: float):
                 }
             ],
             "back_urls": {
-                "success": "https://amarena-sorveteria.preview.emergentagent.com/success",
-                "failure": "https://amarena-sorveteria.preview.emergentagent.com/failure",
-                "pending": "https://amarena-sorveteria.preview.emergentagent.com/pending"
+                "success": "https://gelado-delivery.preview.emergentagent.com/success",
+                "failure": "https://gelado-delivery.preview.emergentagent.com/failure",
+                "pending": "https://gelado-delivery.preview.emergentagent.com/pending"
             },
             "auto_return": "approved",
             "external_reference": order_id
@@ -489,9 +489,9 @@ async def create_payment(order_id: str, total: float):
                 }
             ],
             "back_urls": {
-                "success": "https://amarena-sorveteria.preview.emergentagent.com/success",
-                "failure": "https://amarena-sorveteria.preview.emergentagent.com/failure",
-                "pending": "https://amarena-sorveteria.preview.emergentagent.com/pending"
+                "success": "https://gelado-delivery.preview.emergentagent.com/success",
+                "failure": "https://gelado-delivery.preview.emergentagent.com/failure",
+                "pending": "https://gelado-delivery.preview.emergentagent.com/pending"
             },
             "auto_return": "approved",
             "external_reference": order_id
