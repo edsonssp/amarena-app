@@ -591,30 +591,47 @@ async def download_deploy_update():
 
 
 # Serve web admin panel (static files)
-WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
+# Try multiple possible paths for the web directory
+_possible_web_dirs = [
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "web"),
+    os.path.join(os.getcwd(), "web"),
+    "/app/web",
+]
+WEB_DIR = None
+for _d in _possible_web_dirs:
+    if os.path.exists(_d) and os.path.isdir(_d):
+        WEB_DIR = _d
+        break
 
 @app.get("/admin/dashboard")
 async def serve_admin_dashboard():
-    file_path = os.path.join(WEB_DIR, "admin", "dashboard.html")
-    if os.path.exists(file_path):
-        return FileResponse(file_path, media_type="text/html")
-    return {"detail": "Admin dashboard not found", "web_dir": WEB_DIR, "exists": os.path.exists(WEB_DIR)}
+    if WEB_DIR:
+        file_path = os.path.join(WEB_DIR, "admin", "dashboard.html")
+        if os.path.exists(file_path):
+            return FileResponse(file_path, media_type="text/html")
+    return {"detail": "web dir", "WEB_DIR": WEB_DIR, "tried": _possible_web_dirs}
 
 @app.get("/admin")
 async def serve_admin():
-    file_path = os.path.join(WEB_DIR, "admin", "index.html")
-    if os.path.exists(file_path):
-        return FileResponse(file_path, media_type="text/html")
-    return {"detail": "Admin not found", "web_dir": WEB_DIR, "exists": os.path.exists(WEB_DIR), "files": os.listdir(WEB_DIR) if os.path.exists(WEB_DIR) else []}
+    if WEB_DIR:
+        file_path = os.path.join(WEB_DIR, "admin", "index.html")
+        if os.path.exists(file_path):
+            return FileResponse(file_path, media_type="text/html")
+    return {"detail": "web dir", "WEB_DIR": WEB_DIR, "tried": _possible_web_dirs}
 
 @app.get("/")
 async def serve_home():
-    file_path = os.path.join(WEB_DIR, "index.html")
-    if os.path.exists(file_path):
-        return FileResponse(file_path, media_type="text/html")
-    return {"message": "Amarena Backend API", "web_dir": WEB_DIR, "exists": os.path.exists(WEB_DIR)}
+    if WEB_DIR:
+        file_path = os.path.join(WEB_DIR, "index.html")
+        if os.path.exists(file_path):
+            return FileResponse(file_path, media_type="text/html")
+    return {"message": "Amarena Backend API", "WEB_DIR": WEB_DIR}
 
 # Mount static assets (JS, CSS, images)
-if os.path.exists(WEB_DIR):
-    app.mount("/assets", StaticFiles(directory=os.path.join(WEB_DIR, "assets")), name="assets")
-    app.mount("/_expo", StaticFiles(directory=os.path.join(WEB_DIR, "_expo")), name="expo")
+if WEB_DIR:
+    _assets = os.path.join(WEB_DIR, "assets")
+    _expo = os.path.join(WEB_DIR, "_expo")
+    if os.path.exists(_assets):
+        app.mount("/assets", StaticFiles(directory=_assets), name="assets")
+    if os.path.exists(_expo):
+        app.mount("/_expo", StaticFiles(directory=_expo), name="expo")
