@@ -577,30 +577,42 @@ async def download_backup():
     else:
         raise HTTPException(status_code=404, detail="Arquivo não encontrado")
 
+@app.get("/api/download/deploy-update")
+async def download_deploy_update():
+    file_path = "/app/amarena-deploy-update.zip"
+    if os.path.exists(file_path):
+        return FileResponse(
+            path=file_path,
+            filename="amarena-deploy-update.zip",
+            media_type="application/zip"
+        )
+    else:
+        raise HTTPException(status_code=404, detail="Arquivo não encontrado")
+
 
 # Serve web admin panel (static files)
-WEB_DIR = os.path.join(os.path.dirname(__file__), "web")
+WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 
 @app.get("/admin/dashboard")
 async def serve_admin_dashboard():
     file_path = os.path.join(WEB_DIR, "admin", "dashboard.html")
     if os.path.exists(file_path):
         return FileResponse(file_path, media_type="text/html")
-    return FileResponse(os.path.join(WEB_DIR, "index.html"), media_type="text/html")
+    return {"detail": "Admin dashboard not found", "web_dir": WEB_DIR, "exists": os.path.exists(WEB_DIR)}
 
 @app.get("/admin")
 async def serve_admin():
     file_path = os.path.join(WEB_DIR, "admin", "index.html")
     if os.path.exists(file_path):
         return FileResponse(file_path, media_type="text/html")
-    return FileResponse(os.path.join(WEB_DIR, "index.html"), media_type="text/html")
+    return {"detail": "Admin not found", "web_dir": WEB_DIR, "exists": os.path.exists(WEB_DIR), "files": os.listdir(WEB_DIR) if os.path.exists(WEB_DIR) else []}
 
 @app.get("/")
 async def serve_home():
     file_path = os.path.join(WEB_DIR, "index.html")
     if os.path.exists(file_path):
         return FileResponse(file_path, media_type="text/html")
-    return {"message": "Amarena Backend API"}
+    return {"message": "Amarena Backend API", "web_dir": WEB_DIR, "exists": os.path.exists(WEB_DIR)}
 
 # Mount static assets (JS, CSS, images)
 if os.path.exists(WEB_DIR):
