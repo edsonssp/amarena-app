@@ -392,6 +392,23 @@ async def update_order_status(order_id: str, status: str, user=Depends(verify_to
         raise HTTPException(status_code=404, detail="Order not found")
     return {"message": "Order status updated successfully"}
 
+@app.put("/api/orders/{order_id}/printed")
+async def mark_order_printed(order_id: str, user=Depends(verify_token)):
+    result = db.orders.update_one(
+        {"_id": ObjectId(order_id)},
+        {"$set": {"printed": True, "printedAt": datetime.now()}}
+    )
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Order not found")
+    return {"message": "Order marked as printed"}
+
+@app.delete("/api/orders/{order_id}")
+async def delete_order(order_id: str, user=Depends(verify_token)):
+    result = db.orders.delete_one({"_id": ObjectId(order_id)})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Order not found")
+    return {"message": "Order deleted successfully"}
+
 @app.post("/api/payment/pix")
 async def create_pix_payment(order_id: str, total: float):
     try:
@@ -588,6 +605,13 @@ async def download_deploy_update():
         )
     else:
         raise HTTPException(status_code=404, detail="Arquivo não encontrado")
+
+@app.get("/api/download/qrcode")
+async def download_qrcode():
+    for path in ["/app/amarena-qrcode.png", os.path.join(os.path.dirname(os.path.abspath(__file__)), "amarena-qrcode.png")]:
+        if os.path.exists(path):
+            return FileResponse(path=path, filename="amarena-qrcode.png", media_type="image/png")
+    raise HTTPException(status_code=404, detail="QR Code não encontrado")
 
 
 # Serve web admin panel (static files)
