@@ -1,6 +1,8 @@
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime, timedelta
@@ -574,3 +576,33 @@ async def download_backup():
         )
     else:
         raise HTTPException(status_code=404, detail="Arquivo não encontrado")
+
+
+# Serve web admin panel (static files)
+WEB_DIR = os.path.join(os.path.dirname(__file__), "web")
+
+@app.get("/admin/dashboard")
+async def serve_admin_dashboard():
+    file_path = os.path.join(WEB_DIR, "admin", "dashboard.html")
+    if os.path.exists(file_path):
+        return FileResponse(file_path, media_type="text/html")
+    return FileResponse(os.path.join(WEB_DIR, "index.html"), media_type="text/html")
+
+@app.get("/admin")
+async def serve_admin():
+    file_path = os.path.join(WEB_DIR, "admin", "index.html")
+    if os.path.exists(file_path):
+        return FileResponse(file_path, media_type="text/html")
+    return FileResponse(os.path.join(WEB_DIR, "index.html"), media_type="text/html")
+
+@app.get("/")
+async def serve_home():
+    file_path = os.path.join(WEB_DIR, "index.html")
+    if os.path.exists(file_path):
+        return FileResponse(file_path, media_type="text/html")
+    return {"message": "Amarena Backend API"}
+
+# Mount static assets (JS, CSS, images)
+if os.path.exists(WEB_DIR):
+    app.mount("/assets", StaticFiles(directory=os.path.join(WEB_DIR, "assets")), name="assets")
+    app.mount("/_expo", StaticFiles(directory=os.path.join(WEB_DIR, "_expo")), name="expo")

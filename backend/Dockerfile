@@ -1,5 +1,3 @@
-Crie um arquivo chamado Dockerfile (sem extensão) na raiz do repositório com este conteúdo:
-
 FROM python:3.11-slim
 
 WORKDIR /app
